@@ -16,7 +16,8 @@ import {
     Undo,
     History,
     FileText,
-    Check
+    Check,
+    Clock
 } from 'lucide-react';
 import { Page } from '@/lib/workspace';
 
@@ -25,9 +26,10 @@ interface PageMenuProps {
     onUpdate: (data: Partial<Page>) => void;
     onDelete: () => void;
     onDuplicate: () => void;
+    onOpenUpdates: () => void;
 }
 
-export default function PageMenu({ page, onUpdate, onDelete, onDuplicate }: PageMenuProps) {
+export default function PageMenu({ page, onUpdate, onDelete, onDuplicate, onOpenUpdates }: PageMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -162,6 +164,19 @@ export default function PageMenu({ page, onUpdate, onDelete, onDuplicate }: Page
                                 <div className={`w-9 h-5 rounded-full relative transition-colors duration-200 ease-in-out ${page.locked ? 'bg-[#2383E2]' : 'bg-gray-200 dark:bg-[#404040]'}`}>
                                     <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full transition-transform duration-200 shadow-sm ${page.locked ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
                                 </div>
+                            </button>
+                        </div>
+
+                        <div className="h-px bg-gray-100 my-1 mx-2 dark:bg-[#2C2C2C]" />
+
+                        {/* Updates & Analytics */}
+                        <div className="py-1 px-1">
+                            <button
+                                onClick={() => { setIsOpen(false); onOpenUpdates(); }}
+                                className="w-full flex items-center px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2C2C2C] transition-colors text-sm text-gray-700 dark:text-gray-300 group"
+                            >
+                                <Clock size={15} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 mr-3" />
+                                <span>Updates & analytics</span>
                             </button>
                         </div>
 

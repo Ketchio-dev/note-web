@@ -270,3 +270,74 @@ export async function getWorkspaceMembers(workspaceId: string) {
     }
     return members;
 }
+
+// --- Collaboration: Updates & Analytics ---
+
+export async function trackPageView(pageId: string, userId: string) {
+    if (!pageId || !userId) return;
+    try {
+        // Add to subcollection 'views'
+        const viewsRef = collection(db, "pages", pageId, "views");
+        await addDoc(viewsRef, {
+            userId,
+            timestamp: serverTimestamp()
+        });
+    } catch (e) {
+        console.error("Failed to track view", e);
+    }
+}
+
+export async function trackPageUpdate(pageId: string, userId: string, action: string, details?: string) {
+    if (!pageId || !userId) return;
+    try {
+        const updatesRef = collection(db, "pages", pageId, "updates");
+        await addDoc(updatesRef, {
+            userId,
+            action,
+            details: details || "",
+            timestamp: serverTimestamp()
+        });
+    } catch (e) {
+        console.error("Failed to track update", e);
+    }
+}
+
+export function subscribeToPageUpdates(pageId: string, callback: (updates: any[]) => void) {
+    const updatesRef = collection(db, "pages", pageId, "updates");
+    const q = query(updatesRef, orderBy("timestamp", "desc")); // Newest first
+
+    return onSnapshot(q, (snapshot) => {
+        const updates: any[] = [];
+        snapshot.forEach(doc => {
+            updates.push({ id: doc.id, ...doc.data() });
+        });
+        callback(updates);
+    });
+}
+
+export async function getPageAnalytics(pageId: string) {
+    // For MVP, just get all views and aggregate in-memory.
+    // In production, use Firebase Aggregation Queries or a scheduled function.
+    const viewsRef = collection(db, "pages", pageId, "views");
+    // Limit to last ~1000 views to be safe for now
+    // Or just query last 30 days
+    // const thirtyDaysAgo = new Date();
+    // thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const snapshot = await getDocs(query(viewsRef, orderBy("timestamp", "desc"))); // Simple fetch all for now
+
+    const views: any[] = [];
+    const uniqueViewers = new Set<string>();
+
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        views.push({ id: doc.id, ...data });
+        if (data.userId) uniqueViewers.add(data.userId);
+    });
+
+    return {
+        totalViews: views.length,
+        uniqueViewers: uniqueViewers.size,
+        views // Return raw list for client-side charting (group by date)
+    };
+}

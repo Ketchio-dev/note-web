@@ -2,17 +2,16 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import { getPage, updatePage, Page, subscribeToPage, getChildPages } from "@/lib/workspace";
+import { getPage, updatePage, Page, subscribeToPage, getChildPages, trackPageView, trackPageUpdate } from "@/lib/workspace";
 import Editor, { EditorHandle } from "@/components/Editor";
 import AIAssistant from "@/components/AIAssistant";
 import { useAuth } from "@/context/AuthContext";
 import DatabaseView from "@/components/DatabaseView";
 import SettingsModal from "@/components/SettingsModal";
 import PageMenu from "@/components/PageMenu";
+import CollaborationDrawer from "@/components/CollaborationDrawer"; // Import Drawer
 import { Share, MoreHorizontal, FileText, Table as TableIcon, Layout } from "lucide-react";
 import { serverTimestamp } from "firebase/firestore";
-
-
 
 export default function PageEditor() {
     const params = useParams();
@@ -32,13 +31,17 @@ export default function PageEditor() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isUpdatesOpen, setIsUpdatesOpen] = useState(false); // Drawer State
 
     // Editor Ref
     const editorRef = useRef<EditorHandle>(null);
 
-    // Data Fetching
+    // Data Fetching & View Tracking
     useEffect(() => {
-        if (pageId) {
+        if (pageId && user) {
+            // Track View on Mount
+            trackPageView(pageId, user.uid);
+
             const unsubscribe = subscribeToPage(pageId, (fetchedPage) => {
                 if (fetchedPage) {
                     setPage(fetchedPage);
@@ -56,7 +59,7 @@ export default function PageEditor() {
 
             return () => unsubscribe();
         }
-    }, [pageId]);
+    }, [pageId, user?.uid]); // Add user?.uid dependency
 
     // Fetch children if database
     useEffect(() => {
@@ -69,7 +72,7 @@ export default function PageEditor() {
 
     // Auto-save Logic
     useEffect(() => {
-        if (!loading && page) {
+        if (!loading && page && user) {
             const isDatabase = page.type === 'database';
 
             // Check for changes
@@ -86,12 +89,21 @@ export default function PageEditor() {
                 if (!isDatabase) updates.content = content;
 
                 await updatePage(pageId, updates);
+
+                // Track Update
+                let action = "edited the page";
+                if (hasTitleChanged) action = "renamed the page";
+                if (hasCoverChanged) action = "changed the cover";
+                if (hasIconChanged) action = "changed the icon";
+
+                await trackPageUpdate(pageId, user.uid, action);
+
                 setSaving(false);
             }, 1000);
 
             return () => clearTimeout(timer);
         }
-    }, [title, content, cover, icon, pageId, loading, page]);
+    }, [title, content, cover, icon, pageId, loading, page, user?.uid]); // Add user?.uid
 
 
     if (loading) return <div className="flex justify-center items-center h-screen text-gray-400">Loading...</div>;
@@ -186,6 +198,7 @@ export default function PageEditor() {
                                 }
                             }}
                             onDuplicate={() => alert("Duplicate coming soon")}
+                            onOpenUpdates={() => setIsUpdatesOpen(true)}
                         />
                     </div>
                 </div>
@@ -230,6 +243,14 @@ export default function PageEditor() {
             </div>
 
             <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} initialTab="members" />
+
+            {/* Collaboration Drawer */}
+            <CollaborationDrawer
+                isOpen={isUpdatesOpen}
+                onClose={() => setIsUpdatesOpen(false)}
+                pageId={pageId}
+                pageTitle={page.title}
+            />
         </div>
     );
 }

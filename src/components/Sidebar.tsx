@@ -111,8 +111,8 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
 
     // Roots
     const rootPages = visiblePages.filter(p => !p.parentId);
-    const privateRootPages = rootPages.filter(p => p.section === 'private' || p.createdBy === user?.uid);
-    const workspaceRootPages = rootPages.filter(p => p.section !== 'private' && p.createdBy !== user?.uid);
+    const privateRootPages = rootPages.filter(p => p.section === 'private');
+    const workspaceRootPages = rootPages.filter(p => p.section !== 'private');
 
     // Context Menu Actions
     const handleContextMenu = (e: React.MouseEvent, pageId: string) => {
