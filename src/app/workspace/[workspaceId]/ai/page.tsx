@@ -26,7 +26,7 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
     const [showHistory, setShowHistory] = useState(false); // Toggle sidebar
 
     // Model Selection State
-    const [model, setModel] = useState("anthropic/claude-4.5-sonnet"); // Default
+    const [model, setModel] = useState("anthropic/claude-3.5-sonnet"); // Default
     const [showModelSelector, setShowModelSelector] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -34,7 +34,19 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
     // Initial Load & History Fetch
     useEffect(() => {
         const stored = localStorage.getItem("openrouter_model");
-        if (stored) setModel(stored);
+        // Validate stored model to ensure it's not an old invalid one
+        const validModels = [
+            "anthropic/claude-3.5-sonnet",
+            "anthropic/claude-3-opus",
+            "google/gemini-flash-1.5",
+            "google/gemini-pro-1.5",
+            "openai/gpt-4o"
+        ];
+        if (stored && validModels.includes(stored)) {
+            setModel(stored);
+        } else {
+            setModel("anthropic/claude-3.5-sonnet");
+        }
 
         if (workspaceId) {
             loadHistory();
@@ -201,26 +213,26 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
                         {/* Model Dropdown */}
                         {showModelSelector && (
                             <div className="absolute top-12 left-0 w-64 bg-[#252525] rounded-xl shadow-2xl border border-gray-800 z-50 max-h-[400px] overflow-y-auto p-1 animate-in fade-in zoom-in-95 duration-100">
-                                <div className="text-[10px] font-semibold text-gray-500 px-2 py-1 uppercase">2025 / Advanced</div>
-                                <button onClick={() => handleModelChange("anthropic/claude-4.5-sonnet")} className="w-full text-left px-2 py-2 hover:bg-[#333] rounded-lg text-xs text-gray-200 flex justify-between items-center transition">
-                                    <span className="font-medium">Claude 4.5 Sonnet</span>
-                                    {model === "anthropic/claude-4.5-sonnet" && <span className="text-white">✓</span>}
+                                <div className="text-[10px] font-semibold text-gray-500 px-2 py-1 uppercase">Advanced Models</div>
+                                <button onClick={() => handleModelChange("anthropic/claude-3.5-sonnet")} className="w-full text-left px-2 py-2 hover:bg-[#333] rounded-lg text-xs text-gray-200 flex justify-between items-center transition">
+                                    <span className="font-medium">Claude 3.5 Sonnet</span>
+                                    {model === "anthropic/claude-3.5-sonnet" && <span className="text-white">✓</span>}
                                 </button>
-                                <button onClick={() => handleModelChange("anthropic/claude-4.5-opus")} className="w-full text-left px-2 py-2 hover:bg-[#333] rounded-lg text-xs text-gray-200 flex justify-between items-center transition">
-                                    <span className="font-medium">Claude 4.5 Opus</span>
-                                    {model === "anthropic/claude-4.5-opus" && <span className="text-white">✓</span>}
+                                <button onClick={() => handleModelChange("anthropic/claude-3-opus")} className="w-full text-left px-2 py-2 hover:bg-[#333] rounded-lg text-xs text-gray-200 flex justify-between items-center transition">
+                                    <span className="font-medium">Claude 3 Opus</span>
+                                    {model === "anthropic/claude-3-opus" && <span className="text-white">✓</span>}
                                 </button>
-                                <button onClick={() => handleModelChange("google/gemini-2.5-flash")} className="w-full text-left px-2 py-2 hover:bg-[#333] rounded-lg text-xs text-gray-200 flex justify-between items-center transition">
-                                    <span className="font-medium">Gemini 2.5 Flash</span>
-                                    {model === "google/gemini-2.5-flash" && <span className="text-white">✓</span>}
+                                <button onClick={() => handleModelChange("google/gemini-flash-1.5")} className="w-full text-left px-2 py-2 hover:bg-[#333] rounded-lg text-xs text-gray-200 flex justify-between items-center transition">
+                                    <span className="font-medium">Gemini 1.5 Flash</span>
+                                    {model === "google/gemini-flash-1.5" && <span className="text-white">✓</span>}
                                 </button>
-                                <button onClick={() => handleModelChange("google/gemini-3.0-pro")} className="w-full text-left px-2 py-2 hover:bg-[#333] rounded-lg text-xs text-gray-200 flex justify-between items-center transition">
-                                    <span className="font-medium">Gemini 3.0 Pro</span>
-                                    {model === "google/gemini-3.0-pro" && <span className="text-white">✓</span>}
+                                <button onClick={() => handleModelChange("google/gemini-pro-1.5")} className="w-full text-left px-2 py-2 hover:bg-[#333] rounded-lg text-xs text-gray-200 flex justify-between items-center transition">
+                                    <span className="font-medium">Gemini 1.5 Pro</span>
+                                    {model === "google/gemini-pro-1.5" && <span className="text-white">✓</span>}
                                 </button>
-                                <button onClick={() => handleModelChange("openai/gpt-5.2")} className="w-full text-left px-2 py-2 hover:bg-[#333] rounded-lg text-xs text-gray-200 flex justify-between items-center transition">
-                                    <span className="font-medium">GPT-5.2</span>
-                                    {model === "openai/gpt-5.2" && <span className="text-white">✓</span>}
+                                <button onClick={() => handleModelChange("openai/gpt-4o")} className="w-full text-left px-2 py-2 hover:bg-[#333] rounded-lg text-xs text-gray-200 flex justify-between items-center transition">
+                                    <span className="font-medium">GPT-4o</span>
+                                    {model === "openai/gpt-4o" && <span className="text-white">✓</span>}
                                 </button>
                             </div>
                         )}
