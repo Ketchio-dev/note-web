@@ -42,15 +42,6 @@ export default function PageMenu({ page, onUpdate, onDelete, onDuplicate }: Page
         reader.onload = (event) => {
             const text = event.target?.result as string;
             if (text) {
-                // Confirm before overwriting if there is content? 
-                // For now, simpler is better for "Import". Just append or replace?
-                // The user usually expects Import to LOAD the file. Replacing is the standard "Open" behavior.
-                // But typically safer to confirm. Since I cannot easily confirm here without more UI, I'll just append?
-                // No, "Import" in this context usually means "Replace". But let's check if the page is empty?
-                // If I overwrite, I might lose data.
-                // Let's standardly PREPEND or APPEND to be safe, or just REPLACE if user wants 'Import'.
-                // Given "Export/Import" symmetry, user might expect to be able to "Restore" from an export.
-                // I will REPLACE the content with the imported text. This is consistent with "Opening" a file.
                 onUpdate({ content: text });
                 setIsOpen(false);
             }
@@ -62,7 +53,7 @@ export default function PageMenu({ page, onUpdate, onDelete, onDuplicate }: Page
         <div className="relative z-50">
             <button
                 onClick={toggleMenu}
-                className="text-gray-400 hover:text-black transition p-1 rounded hover:bg-gray-100"
+                className="text-gray-400 hover:text-black dark:hover:text-white transition p-1 rounded-md hover:bg-gray-100 dark:hover:bg-[#2C2C2C]"
             >
                 <MoreHorizontal size={20} />
             </button>
@@ -73,120 +64,116 @@ export default function PageMenu({ page, onUpdate, onDelete, onDuplicate }: Page
                     <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
                     {/* Menu Content */}
-                    <div className="absolute right-0 top-8 w-[280px] bg-white rounded-lg shadow-xl border border-gray-200 z-50 py-2 animate-in fade-in zoom-in-95 duration-100 dark:bg-[#1C1C1C] dark:border-gray-700">
+                    <div className="absolute right-0 top-10 w-[260px] bg-white rounded-xl shadow-2xl border border-gray-200/50 z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150 dark:bg-[#1E1E1E] dark:border-[#333] tracking-normal overflow-hidden">
 
                         {/* Style Section */}
-                        <div className="px-4 py-2">
-                            <div className="text-xs text-gray-500 font-medium mb-2 pl-1">Style</div>
+                        <div className="px-3 py-2">
+                            <div className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-2 pl-1">Style</div>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => onUpdate({ font: 'default' })}
-                                    className={`flex-1 h-20 rounded border flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition relative ${page.font === 'default' ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'}`}
+                                    className={`flex-1 h-16 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all relative ${page.font === 'default' ? 'border-[#2383E2] bg-blue-50/10 dark:bg-blue-900/10' : 'border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#2C2C2C]'}`}
                                 >
-                                    <span className="text-2xl font-sans">Ag</span>
-                                    <span className="text-xs text-gray-500">Default</span>
-                                    {page.font === 'default' && <div className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full" />}
+                                    <span className="text-2xl font-sans text-gray-800 dark:text-gray-100">Ag</span>
+                                    <span className="text-[10px] text-gray-500 font-medium">Default</span>
+                                    {page.font === 'default' && <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#2383E2] rounded-full" />}
                                 </button>
                                 <button
                                     onClick={() => onUpdate({ font: 'serif' })}
-                                    className={`flex-1 h-20 rounded border flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition relative ${page.font === 'serif' ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'}`}
+                                    className={`flex-1 h-16 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all relative ${page.font === 'serif' ? 'border-[#2383E2] bg-blue-50/10 dark:bg-blue-900/10' : 'border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#2C2C2C]'}`}
                                 >
-                                    <span className="text-2xl font-serif">Ag</span>
-                                    <span className="text-xs text-gray-500">Serif</span>
-                                    {page.font === 'serif' && <div className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full" />}
+                                    <span className="text-2xl font-serif text-gray-800 dark:text-gray-100">Ag</span>
+                                    <span className="text-[10px] text-gray-500 font-medium">Serif</span>
+                                    {page.font === 'serif' && <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#2383E2] rounded-full" />}
                                 </button>
                                 <button
                                     onClick={() => onUpdate({ font: 'mono' })}
-                                    className={`flex-1 h-20 rounded border flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition relative ${page.font === 'mono' ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'}`}
+                                    className={`flex-1 h-16 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all relative ${page.font === 'mono' ? 'border-[#2383E2] bg-blue-50/10 dark:bg-blue-900/10' : 'border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#2C2C2C]'}`}
                                 >
-                                    <span className="text-2xl font-mono">Ag</span>
-                                    <span className="text-xs text-gray-500">Mono</span>
-                                    {page.font === 'mono' && <div className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full" />}
+                                    <span className="text-2xl font-mono text-gray-800 dark:text-gray-100">Ag</span>
+                                    <span className="text-[10px] text-gray-500 font-medium">Mono</span>
+                                    {page.font === 'mono' && <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#2383E2] rounded-full" />}
                                 </button>
                             </div>
                         </div>
 
-                        <div className="h-px bg-gray-100 my-1 dark:bg-gray-800" />
+                        <div className="h-px bg-gray-100 my-1 mx-2 dark:bg-[#2C2C2C]" />
 
                         {/* Toggles */}
-                        <div className="py-1">
+                        <div className="py-1 px-1">
                             <button
                                 onClick={() => onUpdate({ smallText: !page.smallText })}
-                                className="w-full flex items-center justify-between px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300"
+                                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2C2C2C] transition-colors group"
                             >
-                                <div className="flex items-center gap-2">
-                                    <Type size={16} className="text-gray-400" />
-                                    <span>Small text</span>
+                                <div className="flex items-center gap-3">
+                                    <Type size={15} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">Small text</span>
                                 </div>
-                                <div className={`w-9 h-5 rounded-full relative transition-colors ${page.smallText ? 'bg-blue-500' : 'bg-gray-300'}`}>
-                                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${page.smallText ? 'left-4.5 translate-x-3.5' : 'left-0.5'}`} />
+                                <div className={`w-9 h-5 rounded-full relative transition-colors duration-200 ease-in-out ${page.smallText ? 'bg-[#2383E2]' : 'bg-gray-200 dark:bg-[#404040]'}`}>
+                                    <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full transition-transform duration-200 shadow-sm ${page.smallText ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
                                 </div>
                             </button>
 
                             <button
                                 onClick={() => onUpdate({ fullWidth: !page.fullWidth })}
-                                className="w-full flex items-center justify-between px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300"
+                                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2C2C2C] transition-colors group"
                             >
-                                <div className="flex items-center gap-2">
-                                    <LayoutTemplate size={16} className="text-gray-400" />
-                                    <span>Full width</span>
+                                <div className="flex items-center gap-3">
+                                    <LayoutTemplate size={15} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">Full width</span>
                                 </div>
-                                <div className={`w-9 h-5 rounded-full relative transition-colors ${page.fullWidth ? 'bg-blue-500' : 'bg-gray-300'}`}>
-                                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${page.fullWidth ? 'left-4.5 translate-x-3.5' : 'left-0.5'}`} />
+                                <div className={`w-9 h-5 rounded-full relative transition-colors duration-200 ease-in-out ${page.fullWidth ? 'bg-[#2383E2]' : 'bg-gray-200 dark:bg-[#404040]'}`}>
+                                    <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full transition-transform duration-200 shadow-sm ${page.fullWidth ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
                                 </div>
                             </button>
                         </div>
 
-                        <div className="h-px bg-gray-100 my-1 dark:bg-gray-800" />
+                        <div className="h-px bg-gray-100 my-1 mx-2 dark:bg-[#2C2C2C]" />
 
                         {/* Actions Group 1 */}
-                        <div className="py-1">
-                            <button className="w-full flex items-center px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300 gap-2">
-                                <ArrowUpRight size={16} className="text-gray-400" />
+                        <div className="py-1 px-1">
+                            <button className="w-full flex items-center px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2C2C2C] transition-colors text-sm text-gray-700 dark:text-gray-300 group">
+                                <ArrowUpRight size={15} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 mr-3" />
                                 <span>Copy link</span>
-                                <span className="ml-auto text-xs text-gray-400">⌘L</span>
+                                <span className="ml-auto text-[10px] text-gray-400 font-medium">⌘L</span>
                             </button>
                             <button
                                 onClick={onDuplicate}
-                                className="w-full flex items-center px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300 gap-2"
+                                className="w-full flex items-center px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2C2C2C] transition-colors text-sm text-gray-700 dark:text-gray-300 group"
                             >
-                                <Copy size={16} className="text-gray-400" />
+                                <Copy size={15} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 mr-3" />
                                 <span>Duplicate</span>
-                                <span className="ml-auto text-xs text-gray-400">⌘D</span>
+                                <span className="ml-auto text-[10px] text-gray-400 font-medium">⌘D</span>
                             </button>
                         </div>
 
-                        <div className="h-px bg-gray-100 my-1 dark:bg-gray-800" />
+                        <div className="h-px bg-gray-100 my-1 mx-2 dark:bg-[#2C2C2C]" />
 
                         {/* Lock */}
-                        <div className="py-1">
+                        <div className="py-1 px-1">
                             <button
                                 onClick={() => onUpdate({ locked: !page.locked })}
-                                className="w-full flex items-center justify-between px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300"
+                                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2C2C2C] transition-colors group"
                             >
-                                <div className="flex items-center gap-2">
-                                    {page.locked ? <Lock size={16} className="text-blue-500" /> : <Unlock size={16} className="text-gray-400" />}
-                                    <span>Lock page</span>
+                                <div className="flex items-center gap-3">
+                                    {page.locked ? <Lock size={15} className="text-[#2383E2]" /> : <Unlock size={15} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />}
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">Lock page</span>
                                 </div>
-                                <div className={`w-9 h-5 rounded-full relative transition-colors ${page.locked ? 'bg-blue-500' : 'bg-gray-300'}`}>
-                                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${page.locked ? 'left-4.5 translate-x-3.5' : 'left-0.5'}`} />
+                                <div className={`w-9 h-5 rounded-full relative transition-colors duration-200 ease-in-out ${page.locked ? 'bg-[#2383E2]' : 'bg-gray-200 dark:bg-[#404040]'}`}>
+                                    <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full transition-transform duration-200 shadow-sm ${page.locked ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
                                 </div>
                             </button>
                         </div>
 
-                        <div className="h-px bg-gray-100 my-1 dark:bg-gray-800" />
+                        <div className="h-px bg-gray-100 my-1 mx-2 dark:bg-[#2C2C2C]" />
 
                         {/* Export / Delete */}
-                        <div className="py-1">
-                            <button onClick={onDelete} className="w-full flex items-center px-4 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 transition text-sm text-red-600 gap-2">
-                                <Trash size={16} />
-                                <span>Delete Page</span>
-                            </button>
+                        <div className="py-1 px-1">
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                className="w-full flex items-center px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300 gap-2"
+                                className="w-full flex items-center px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2C2C2C] transition-colors text-sm text-gray-700 dark:text-gray-300 group"
                             >
-                                <Upload size={16} className="text-gray-400" />
+                                <Upload size={15} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 mr-3" />
                                 <span>Import</span>
                             </button>
                             <input
@@ -196,15 +183,19 @@ export default function PageMenu({ page, onUpdate, onDelete, onDuplicate }: Page
                                 className="hidden"
                                 accept=".md,.txt,.json,.html"
                             />
-                            <button className="w-full flex items-center px-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300 gap-2">
-                                <Download size={16} className="text-gray-400" />
+                            <button className="w-full flex items-center px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2C2C2C] transition-colors text-sm text-gray-700 dark:text-gray-300 group">
+                                <Download size={15} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 mr-3" />
                                 <span>Export</span>
+                            </button>
+                            <button onClick={onDelete} className="w-full flex items-center px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-sm text-red-600 group">
+                                <Trash size={15} className="mr-3 opacity-70 group-hover:opacity-100" />
+                                <span>Delete Page</span>
                             </button>
                         </div>
 
                         {/* Footer Info */}
-                        <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-800">
-                            <div className="text-xs text-gray-400">
+                        <div className="px-3 py-2 border-t border-gray-100 dark:border-[#2C2C2C] bg-gray-50/50 dark:bg-[#252525]">
+                            <div className="text-[10px] text-gray-400 text-center">
                                 Last edited today at 3:45 PM
                             </div>
                         </div>

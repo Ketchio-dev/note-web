@@ -81,7 +81,7 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
 
             // Parse Actions
             let displayContent = content;
-            const actionRegex = /:::action\s*({.*?})\s*:::/gs;
+            const actionRegex = /:::action\s*({[\s\S]*?})\s*:::/g;
             let match;
 
             while ((match = actionRegex.exec(content)) !== null) {
