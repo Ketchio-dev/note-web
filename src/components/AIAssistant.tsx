@@ -113,7 +113,7 @@ export default function AIAssistant({ onInsertContent, editorContent, workspaceI
             
             Always aim for clarity and actionable information.`;
 
-            const result = await generateAIContent(finalPrompt, sysPrompt);
+            const result = await generateAIContent(finalPrompt, sysPrompt, model);
 
             setMessages(prev => [...prev, { role: 'assistant', content: result }]);
         } catch (e) {
@@ -179,9 +179,6 @@ export default function AIAssistant({ onInsertContent, editorContent, workspaceI
                                 </button>
                                 <button onClick={() => handleModelChange("openai/gpt-5.2")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
                                     GPT-5.2 {model === "openai/gpt-5.2" && "✓"}
-                                </button>
-                                <button onClick={() => handleModelChange("openai/gpt-5.2-thinking")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
-                                    GPT-5.2 (Thinking) {model === "openai/gpt-5.2-thinking" && "✓"}
                                 </button>
                             </div>
                         )}
