@@ -223,6 +223,7 @@ export default function PageEditor() {
                                 if (editorRef.current) editorRef.current.insertContent(text);
                                 else setContent(prev => prev + text);
                             }}
+                            onReplaceContent={(text) => setContent(text)}
                         />
                     </div>
                 )}

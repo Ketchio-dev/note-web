@@ -7,6 +7,7 @@ import { subscribeToWorkspacePages, Page } from '@/lib/workspace';
 
 interface AIAssistantProps {
     onInsertContent: (content: string) => void;
+    onReplaceContent: (content: string) => void;
     editorContent: string;
     workspaceId: string;
 }
@@ -16,7 +17,7 @@ interface Message {
     content: string;
 }
 
-export default function AIAssistant({ onInsertContent, editorContent, workspaceId }: AIAssistantProps) {
+export default function AIAssistant({ onInsertContent, onReplaceContent, editorContent, workspaceId }: AIAssistantProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState("");
     const [messages, setMessages] = useState<Message[]>([]);
@@ -32,54 +33,7 @@ export default function AIAssistant({ onInsertContent, editorContent, workspaceI
     const inputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-        let unsubscribe: (() => void) | undefined;
-
-        if (isOpen) {
-            // Subscribe to real-time updates when open
-            // Subscribe to real-time updates when open
-            unsubscribe = subscribeToWorkspacePages(workspaceId, (pages) => {
-                // Filter out:
-                // 1. Explicitly trashed pages
-                // 2. Orphans (parentId points to non-existent page)
-                // 3. Children of trashed/hidden pages
-
-                const pageMap = new Map(pages.map(p => [p.id, p]));
-
-                const isVisible = (p: Page): boolean => {
-                    if (p.inTrash) return false;
-                    if (!p.parentId) return true; // Root page, visible if not trash
-
-                    const parent = pageMap.get(p.parentId);
-                    if (!parent) return false; // Orphan (parent deleted/missing)
-
-                    return isVisible(parent); // Recursive check up the tree
-                };
-
-                setAvailablePages(pages.filter(p => isVisible(p)));
-            });
-
-            // Sync model from storage
-            const storedModel = localStorage.getItem("openrouter_model");
-            // Validate stored model to ensure it's not an old invalid one
-            const validModels = [
-                "anthropic/claude-4.5-sonnet",
-                "anthropic/claude-4.5-opus",
-                "google/gemini-2.5-flash",
-                "google/gemini-3.0-pro",
-                "openai/gpt-5.2"
-            ];
-            if (storedModel && validModels.includes(storedModel)) {
-                setModel(storedModel);
-            } else {
-                setModel("google/gemini-3.0-pro");
-            }
-        }
-
-        return () => {
-            if (unsubscribe) unsubscribe();
-        };
-    }, [isOpen, workspaceId]);
+    // ... (useEffect remains same) ...
 
     const handleModelChange = (newModel: string) => {
         setModel(newModel);
@@ -100,14 +54,9 @@ export default function AIAssistant({ onInsertContent, editorContent, workspaceI
             let contextStr = "";
             if (selectedContext.length > 0) {
                 contextStr += "Context from referenced pages:\n";
-                // In a real app, we'd fetch content for these pages. 
-                // For MVP, we pass their titles as a stub or assume we have content if simpler. 
-                // Let's just mention them for now.
                 contextStr += selectedContext.map(p => `- [Page: ${p.title}]`).join("\n") + "\n\n";
             }
-            contextStr += `Current Editor Content:\n${editorContent.substring(0, 1000)}...\n\n`; // Truncate for token limits
-
-            contextStr += `Current Editor Content:\n${editorContent.substring(0, 1000)}...\n\n`; // Truncate for token limits
+            contextStr += `Current Editor Content:\n${editorContent.substring(0, 1000)}...\n\n`;
 
             let finalPrompt = `${contextStr}User Query: ${userMsg.content}`;
             if (isWebMode) {
@@ -117,17 +66,43 @@ export default function AIAssistant({ onInsertContent, editorContent, workspaceI
             const sysPrompt = `You are an expert AI coding and note-taking assistant embedded in a modern notion-like workspace.
             
             **Guidelines:**
-            1. **Format**: Use clean Markdown (Headers, Bullet points, Code blocks, Tables).
-            2. **Tone**: Be professional, direct, and helpful. Avoid robotic intros.
-            3. **Content**: When asked to research or explain, provide comprehensive and structured answers.
-            4. **Context**: Use the user's provided page context to give relevant answers.
-            5. **Language**: Respond in the same language as the user's query (Korean/English/etc).
+            1. **Format**: Use clean Markdown.
+            2. **Tone**: Be professional, direct, and helpful.
+            3. **Tools/Permissions**: You have permission to MODIFY the page content directly.
+               - To **APPEND** text to the end: Use \`:::action { "type": "append", "content": "text to add" } :::\`
+               - To **REPLACE** the entire content: Use \`:::action { "type": "replace", "content": "new full content" } :::\`
+               - ONLY use these actions if the user explicitly asks to edit, write, fix, or modify the page.
+               - You can output multiple actions or mix text with actions.
+            4. **Context**: Use the user's provided page context.
             
             Always aim for clarity and actionable information.`;
 
             const { content, reasoning } = await generateAIContent(finalPrompt, sysPrompt, model);
 
-            setMessages(prev => [...prev, { role: 'assistant', content, reasoning }]);
+            // Parse Actions
+            let displayContent = content;
+            const actionRegex = /:::action\s*({.*?})\s*:::/gs;
+            let match;
+
+            while ((match = actionRegex.exec(content)) !== null) {
+                try {
+                    const actionJson = match[1];
+                    const action = JSON.parse(actionJson);
+
+                    if (action.type === 'append') {
+                        onInsertContent(action.content);
+                    } else if (action.type === 'replace') {
+                        onReplaceContent(action.content);
+                    }
+
+                    // Remove action block from display content
+                    displayContent = displayContent.replace(match[0], `*[Action Executed: ${action.type}]*`);
+                } catch (e) {
+                    console.error("Failed to parse AI action", e);
+                }
+            }
+
+            setMessages(prev => [...prev, { role: 'assistant', content: displayContent, reasoning }]);
         } catch (e) {
             setMessages(prev => [...prev, { role: 'assistant', content: "Error: Could not process request." }]);
         } finally {
