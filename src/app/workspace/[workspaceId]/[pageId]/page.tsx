@@ -10,6 +10,7 @@ import DatabaseView from "@/components/DatabaseView";
 import SettingsModal from "@/components/SettingsModal";
 import PageMenu from "@/components/PageMenu";
 import CollaborationDrawer from "@/components/CollaborationDrawer"; // Import Drawer
+import SharePopover from "@/components/SharePopover"; // Import SharePopover
 import { Share, MoreHorizontal, FileText, Table as TableIcon, Layout } from "lucide-react";
 import { serverTimestamp } from "firebase/firestore";
 
@@ -32,6 +33,7 @@ export default function PageEditor() {
     const [saving, setSaving] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isUpdatesOpen, setIsUpdatesOpen] = useState(false); // Drawer State
+    const [isShareOpen, setIsShareOpen] = useState(false); // Share Popover State
 
     // Editor Ref
     const editorRef = useRef<EditorHandle>(null);
@@ -181,10 +183,18 @@ export default function PageEditor() {
                     </div>
 
                     {/* Right Actions */}
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                            <Share size={18} />
+                    <div className="flex items-center gap-2 relative">
+                        <button onClick={() => setIsShareOpen(!isShareOpen)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <span className="text-sm font-medium mr-1">Share</span>
                         </button>
+                        {/* Share Popover */}
+                        <SharePopover
+                            isOpen={isShareOpen}
+                            onClose={() => setIsShareOpen(false)}
+                            workspaceId={workspaceId}
+                            pageUrl={typeof window !== 'undefined' ? window.location.href : ""}
+                        />
+
                         <PageMenu
                             page={page}
                             onUpdate={async (updates) => {

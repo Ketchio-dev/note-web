@@ -228,8 +228,17 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
         <div className="w-[240px] h-screen bg-[#F7F7F5] dark:bg-[#202020] border-r border-gray-200 dark:border-gray-800 flex flex-col font-sans transition-colors shrink-0">
             {/* Workspace Switcher / User */}
             <div className="p-3 hover:bg-gray-200 dark:hover:bg-[#2C2C2C] m-2 rounded-md cursor-pointer transition flex items-center gap-2 mb-4">
-                <div className="w-5 h-5 bg-orange-500 rounded text-[10px] text-white flex items-center justify-center font-bold">J</div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate flex-1">Junsu's Workspace</span>
+                {user?.photoURL ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.photoURL} alt="Profile" className="w-5 h-5 rounded-md object-cover" />
+                ) : (
+                    <div className="w-5 h-5 bg-orange-500 rounded text-[10px] text-white flex items-center justify-center font-bold">
+                        {user?.displayName ? user.displayName[0].toUpperCase() : "U"}
+                    </div>
+                )}
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate flex-1">
+                    {user?.displayName ? `${user.displayName}'s Note` : "My Workspace"}
+                </span>
                 <ChevronDown size={14} className="text-gray-400" />
             </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, ArrowUp, X, Globe, Paperclip, ChevronDown, FileText, Search, Zap, Copy } from 'lucide-react';
+import { Sparkles, ArrowUp, X, Globe, Paperclip, ChevronDown, FileText, Search, Zap, Copy, Layout } from 'lucide-react';
 import { generateAIContent } from '@/lib/ai';
 import { subscribeToWorkspacePages, Page } from '@/lib/workspace';
 
@@ -23,7 +23,12 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(false);
     const [contextMenuOpen, setContextMenuOpen] = useState(false);
+
+    // Page Data
     const [availablePages, setAvailablePages] = useState<Page[]>([]);
+
+    // Search State
+    const [searchQuery, setSearchQuery] = useState("");
 
     const [selectedContext, setSelectedContext] = useState<Page[]>([]);
     const [isWebMode, setIsWebMode] = useState(false);
@@ -32,8 +37,26 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
 
     const inputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // ... (useEffect remains same) ...
+    // Fetch Pages for Context
+    useEffect(() => {
+        if (!workspaceId) return;
+        const unsubscribe = subscribeToWorkspacePages(workspaceId, (pages) => {
+            setAvailablePages(pages);
+        });
+        return () => unsubscribe();
+    }, [workspaceId]);
+
+    // Focus search when opening context menu
+    useEffect(() => {
+        if (contextMenuOpen) {
+            setTimeout(() => searchInputRef.current?.focus(), 100);
+        } else {
+            setSearchQuery(""); // Reset search on close
+        }
+    }, [contextMenuOpen]);
+
 
     const handleModelChange = (newModel: string) => {
         setModel(newModel);
@@ -54,7 +77,7 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
             let contextStr = "";
             if (selectedContext.length > 0) {
                 contextStr += "Context from referenced pages:\n";
-                contextStr += selectedContext.map(p => `- [Page: ${p.title}]`).join("\n") + "\n\n";
+                contextStr += selectedContext.map(p => `- [Page: ${p.title}] (Content: ${p.content || "Empty"})`).join("\n") + "\n\n";
             }
             contextStr += `Current Editor Content:\n${editorContent.substring(0, 1000)}...\n\n`;
 
@@ -112,22 +135,20 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
 
     const handleSuggestion = (type: 'translate' | 'improve' | 'summarize') => {
         let text = "";
-        let sys = "";
         if (type === 'translate') {
             text = "Translate this page to English (or identify language and translate to opposite).";
-            sys = "You are a translator.";
         } else if (type === 'improve') {
             text = "Fix grammar and improve the tone of this page.";
-            sys = "You are an expert editor.";
         } else if (type === 'summarize') {
             text = "Summarize this page in 3 bullet points.";
-            sys = "You are a summarizer.";
         }
         setInput(text);
-        // Optionally auto-send:
-        // handleSend(); // But 'input' isn't set yet in state immediately. 
-        // Better to just populate input for user to confirm.
     };
+
+    // Filter pages for context menu
+    const filteredPages = availablePages
+        .filter(p => !p.inTrash)
+        .filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
         <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-2 font-sans">
@@ -304,26 +325,59 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
                                             <span className="font-bold">@</span> Add context
                                         </button>
 
-                                        {/* Context Menu */}
+                                        {/* Improved Context Menu */}
                                         {contextMenuOpen && (
-                                            <div className="absolute bottom-8 left-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-48 overflow-y-auto z-50">
-                                                <div className="p-2 text-xs font-bold text-gray-400 uppercase">Pages</div>
-                                                {availablePages.map(page => (
-                                                    <button
-                                                        key={page.id}
-                                                        onClick={() => {
-                                                            if (!selectedContext.find(p => p.id === page.id)) {
-                                                                setSelectedContext([...selectedContext, page]);
-                                                            }
-                                                            setContextMenuOpen(false);
-                                                            inputRef.current?.focus();
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm flex items-center gap-2 truncate"
-                                                    >
-                                                        <FileText size={14} />
-                                                        {page.title || "Untitled"}
-                                                    </button>
-                                                ))}
+                                            <div className="absolute bottom-8 left-0 w-64 bg-[#1E1E1E] text-white rounded-lg shadow-2xl border border-gray-700 max-h-64 overflow-hidden z-50 flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                                                {/* Search Bar */}
+                                                <div className="p-2 border-b border-gray-700">
+                                                    <div className="flex items-center gap-2 bg-[#2C2C2C] rounded px-2 py-1.5 border border-transparent focus-within:border-blue-500 transition-colors">
+                                                        <Search size={14} className="text-gray-400" />
+                                                        <input
+                                                            ref={searchInputRef}
+                                                            type="text"
+                                                            placeholder="Search pages..."
+                                                            value={searchQuery}
+                                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                                            className="bg-transparent border-none text-xs text-white placeholder:text-gray-500 w-full focus:outline-none"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="overflow-y-auto flex-1 py-1">
+                                                    <div className="px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase">Pages</div>
+
+                                                    {filteredPages.length === 0 ? (
+                                                        <div className="px-3 py-2 text-xs text-gray-500 italic text-center">No pages found</div>
+                                                    ) : (
+                                                        filteredPages.map(page => (
+                                                            <button
+                                                                key={page.id}
+                                                                onClick={() => {
+                                                                    if (!selectedContext.find(p => p.id === page.id)) {
+                                                                        setSelectedContext([...selectedContext, page]);
+                                                                    }
+                                                                    setContextMenuOpen(false);
+                                                                    setSearchQuery("");
+                                                                    inputRef.current?.focus();
+                                                                }}
+                                                                className="w-full text-left px-3 py-2 hover:bg-[#2C2C2C] text-sm flex items-center gap-2.5 transition-colors group"
+                                                            >
+                                                                <div className="w-5 h-5 flex items-center justify-center text-base bg-[#2C2C2C] group-hover:bg-[#333] rounded-sm transition-colors">
+                                                                    {page.icon ? page.icon : (page.type === 'database' ? <Layout size={12} className="text-gray-400" /> : <FileText size={12} className="text-gray-400" />)}
+                                                                </div>
+                                                                <div className="flex-1 truncate">
+                                                                    <div className="text-gray-200 text-sm truncate">{page.title || "Untitled"}</div>
+                                                                    <div className="text-[10px] text-gray-500 truncate flex items-center gap-1">
+                                                                        {page.section === 'private' ? 'Private' : 'Teamspace'}
+                                                                        <span className="w-1 h-1 rounded-full bg-gray-600"></span>
+                                                                        Last edited by You
+                                                                    </div>
+                                                                </div>
+                                                                {selectedContext.find(p => p.id === page.id) && <span className="text-blue-500 text-xs">Added</span>}
+                                                            </button>
+                                                        ))
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
