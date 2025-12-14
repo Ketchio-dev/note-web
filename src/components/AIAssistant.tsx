@@ -26,7 +26,7 @@ export default function AIAssistant({ onInsertContent, editorContent, workspaceI
 
     const [selectedContext, setSelectedContext] = useState<Page[]>([]);
     const [isWebMode, setIsWebMode] = useState(false);
-    const [model, setModel] = useState("anthropic/claude-3.5-sonnet");
+    const [model, setModel] = useState("google/gemini-3.0-pro");
     const [showModelSelector, setShowModelSelector] = useState(false);
 
     const inputRef = useRef<HTMLInputElement>(null);
@@ -63,16 +63,16 @@ export default function AIAssistant({ onInsertContent, editorContent, workspaceI
             const storedModel = localStorage.getItem("openrouter_model");
             // Validate stored model to ensure it's not an old invalid one
             const validModels = [
-                "anthropic/claude-3.5-sonnet",
-                "anthropic/claude-3-opus",
-                "google/gemini-flash-1.5",
-                "google/gemini-pro-1.5",
-                "openai/gpt-4o"
+                "anthropic/claude-4.5-sonnet",
+                "anthropic/claude-4.5-opus",
+                "google/gemini-2.5-flash",
+                "google/gemini-3.0-pro",
+                "openai/gpt-5.2"
             ];
             if (storedModel && validModels.includes(storedModel)) {
                 setModel(storedModel);
             } else {
-                setModel("anthropic/claude-3.5-sonnet");
+                setModel("google/gemini-3.0-pro");
             }
         }
 
@@ -176,21 +176,21 @@ export default function AIAssistant({ onInsertContent, editorContent, workspaceI
                         {/* Model Selector Dropdown */}
                         {showModelSelector && (
                             <div className="absolute top-12 left-4 w-64 bg-white dark:bg-[#252525] rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-[300px] overflow-y-auto p-1 animate-in z-50 fade-in zoom-in-95 duration-100">
-                                <div className="text-[10px] font-semibold text-gray-400 px-2 py-1 uppercase">Advanced Models</div>
-                                <button onClick={() => handleModelChange("anthropic/claude-3.5-sonnet")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
-                                    Claude 3.5 Sonnet {model === "anthropic/claude-3.5-sonnet" && "✓"}
+                                <div className="text-[10px] font-semibold text-gray-400 px-2 py-1 uppercase">2025 / Advanced</div>
+                                <button onClick={() => handleModelChange("anthropic/claude-4.5-sonnet")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
+                                    Claude 4.5 Sonnet {model === "anthropic/claude-4.5-sonnet" && "✓"}
                                 </button>
-                                <button onClick={() => handleModelChange("anthropic/claude-3-opus")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
-                                    Claude 3 Opus {model === "anthropic/claude-3-opus" && "✓"}
+                                <button onClick={() => handleModelChange("anthropic/claude-4.5-opus")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
+                                    Claude 4.5 Opus {model === "anthropic/claude-4.5-opus" && "✓"}
                                 </button>
-                                <button onClick={() => handleModelChange("google/gemini-flash-1.5")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
-                                    Gemini 1.5 Flash {model === "google/gemini-flash-1.5" && "✓"}
+                                <button onClick={() => handleModelChange("google/gemini-2.5-flash")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
+                                    Gemini 2.5 Flash {model === "google/gemini-2.5-flash" && "✓"}
                                 </button>
-                                <button onClick={() => handleModelChange("google/gemini-pro-1.5")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
-                                    Gemini 1.5 Pro {model === "google/gemini-pro-1.5" && "✓"}
+                                <button onClick={() => handleModelChange("google/gemini-3.0-pro")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
+                                    Gemini 3.0 Pro {model === "google/gemini-3.0-pro" && "✓"}
                                 </button>
-                                <button onClick={() => handleModelChange("openai/gpt-4o")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
-                                    GPT-4o {model === "openai/gpt-4o" && "✓"}
+                                <button onClick={() => handleModelChange("openai/gpt-5.2")} className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-200 flex justify-between items-center">
+                                    GPT-5.2 {model === "openai/gpt-5.2" && "✓"}
                                 </button>
                             </div>
                         )}
