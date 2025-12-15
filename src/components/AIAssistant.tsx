@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, X, Zap } from 'lucide-react';
 import { subscribeToWorkspacePages, Page } from '@/lib/workspace';
+import { useAuth } from '@/context/AuthContext';
 
 import ChatMessage from './ai/ChatMessage';
 import ChatInput from './ai/ChatInput';
@@ -20,6 +21,9 @@ interface AIAssistantProps {
 export default function AIAssistant({ onInsertContent, onReplaceContent, editorContent, workspaceId }: AIAssistantProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [contextMenuOpen, setContextMenuOpen] = useState(false);
+
+    // Auth
+    const { user } = useAuth();
 
     // Page Data subscription
     const [availablePages, setAvailablePages] = useState<Page[]>([]);
@@ -50,7 +54,7 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
         handleSuggestion
     } = useAIChat({
         workspaceId,
-        userId: '', // Will be updated once we integrate auth context
+        userId: user?.uid || '',
         editorContent,
         onInsertContent,
         onReplaceContent,

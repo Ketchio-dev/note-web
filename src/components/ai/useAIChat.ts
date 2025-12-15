@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { generateAIContent } from '@/lib/ai';
 import { updatePage, Page } from '@/lib/workspace';
+import { toast } from 'sonner';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -119,8 +120,16 @@ export function useAIChat({
             }
 
             setMessages(prev => [...prev, { role: 'assistant', content: displayContent, reasoning }]);
-        } catch (e) {
-            setMessages(prev => [...prev, { role: 'assistant', content: "Error: Could not process request." }]);
+        } catch (e: any) {
+            console.error("AI Generation Failed", e);
+            const errorMessage = e?.message || "알 수 없는 오류가 발생했습니다.";
+            toast.error("AI 응답 생성 실패", {
+                description: errorMessage
+            });
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: "죄송합니다. 오류가 발생했습니다. API 키가 설정되어 있는지 확인해주세요."
+            }]);
         } finally {
             setLoading(false);
         }
