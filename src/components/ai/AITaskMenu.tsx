@@ -27,49 +27,49 @@ const TASK_CONFIG = {
     [AITask.SUMMARIZE]: {
         icon: FileText,
         label: 'Summarize',
-        prompt: 'Summarize the following text concisely in 3-5 bullet points:',
+        prompt: 'Provide ONLY a concise summary in 3-5 bullet points. No introduction, no explanation, just the bullet points:\n\nText to summarize:',
         color: 'text-blue-600'
     },
     [AITask.TRANSLATE]: {
         icon: Languages,
         label: 'Translate to Korean',
-        prompt: 'Translate the following text to Korean. Maintain the original tone and meaning:',
+        prompt: 'Translate the following text to Korean. Return ONLY the translated text, nothing else:\n\nText to translate:',
         color: 'text-green-600'
     },
     [AITask.EXPAND]: {
         icon: Wand2,
         label: 'Expand',
-        prompt: 'Expand and elaborate on the following text with more details and examples:',
+        prompt: 'Expand the following text with more details and examples. Return ONLY the expanded version without any introduction:\n\nText to expand:',
         color: 'text-purple-600'
     },
     [AITask.SIMPLIFY]: {
         icon: MessageCircle,
         label: 'Simplify',
-        prompt: 'Simplify the following text for easier understanding. Use clear, simple language:',
+        prompt: 'Simplify the following text for easier understanding. Return ONLY the simplified version with no introduction:\n\nText to simplify:',
         color: 'text-orange-600'
     },
     [AITask.FIX_GRAMMAR]: {
         icon: CheckCircle2,
         label: 'Fix Grammar',
-        prompt: 'Fix grammar, spelling, and punctuation in the following text. Return only the corrected version:',
+        prompt: 'Fix all grammar, spelling, and punctuation errors. Return ONLY the corrected text, nothing else:\n\nText to correct:',
         color: 'text-red-600'
     },
     [AITask.CHANGE_TONE]: {
         icon: MessageCircle,
         label: 'Make Professional',
-        prompt: 'Rewrite the following text in a professional, formal tone:',
+        prompt: 'Rewrite in a professional, formal tone. Return ONLY the rewritten text:\n\nText to rewrite:',
         color: 'text-indigo-600'
     },
     [AITask.EXTRACT_ACTIONS]: {
         icon: List,
         label: 'Extract Action Items',
-        prompt: 'Extract action items from the following text as a clear, bulleted list:',
+        prompt: 'Extract action items as a bulleted list. Return ONLY the bullet points, no introduction:\n\nText to analyze:',
         color: 'text-yellow-600'
     },
     [AITask.CONTINUE_WRITING]: {
         icon: Sparkles,
         label: 'Continue Writing',
-        prompt: 'Continue writing from where this text left off. Match the tone and style:',
+        prompt: 'Continue writing from where this text ends. Match the tone and style. Return ONLY the continuation:\n\nText to continue:',
         color: 'text-pink-600'
     },
 };
