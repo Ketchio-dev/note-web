@@ -2,12 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { generateAIContent } from '@/lib/ai';
 import { updatePage, Page } from '@/lib/workspace';
 import { toast } from 'sonner';
-
-interface Message {
-    role: 'user' | 'assistant';
-    content: string;
-    reasoning?: string;
-}
+import { Message, AIAction } from '@/types/ai';
 
 interface UseAIChatProps {
     workspaceId: string;
@@ -93,7 +88,7 @@ export function useAIChat({
             let displayContent = content;
             const actionRegex = /:::action\s*({[\s\S]*?})\s*:::/g;
             let match;
-            const actionsToExecute: any[] = [];
+            const actionsToExecute: AIAction[] = [];
 
             while ((match = actionRegex.exec(content)) !== null) {
                 try {
@@ -108,9 +103,9 @@ export function useAIChat({
 
             // Execute Actions
             for (const action of actionsToExecute) {
-                if (action.type === 'append') {
+                if (action.type === 'append' && action.content) {
                     onInsertContent(action.content);
-                } else if (action.type === 'replace') {
+                } else if (action.type === 'replace' && action.content) {
                     onReplaceContent(action.content);
                 } else if (action.type === 'update_page') {
                     if (action.pageId && action.content) {
