@@ -5,15 +5,17 @@ import { X, UserPlus, Users, Key, LogOut } from "lucide-react";
 import { addMemberToWorkspace, getWorkspaceMembers } from "@/lib/workspace";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 export default function SettingsModal({ isOpen, onClose, initialTab = 'general' }: { isOpen: boolean; onClose: () => void; initialTab?: 'general' | 'members' }) {
     const params = useParams();
-    const router = useRouter(); // For redirect after logout if needed (though AuthContext usually handles state)
-    const { signOut } = useAuth();
+    const router = useRouter();
+    const { user, signOut } = useAuth();
     const workspaceId = params.workspaceId as string;
 
     const [activeTab, setActiveTab] = useState<'general' | 'members'>(initialTab);
     const [apiKey, setApiKey] = useState("");
+    const [hasApiKey, setHasApiKey] = useState(false);
     const [model, setModel] = useState("anthropic/claude-4.5-sonnet");
 
     // Members State
@@ -23,15 +25,25 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
     const [inviteStatus, setInviteStatus] = useState("");
 
     useEffect(() => {
-        if (isOpen) {
-            setActiveTab(initialTab); // Reset tab when opening
-            const storedKey = localStorage.getItem("openrouter_api_key") || "";
+        if (isOpen && user) {
+            setActiveTab(initialTab);
             const storedModel = localStorage.getItem("openrouter_model") || "anthropic/claude-4.5-sonnet";
-            setApiKey(storedKey);
             setModel(storedModel);
             loadMembers();
+            checkApiKeyExists();
         }
-    }, [isOpen, workspaceId, initialTab]);
+    }, [isOpen, workspaceId, initialTab, user]);
+
+    const checkApiKeyExists = async () => {
+        if (!user) return;
+        try {
+            const res = await fetch(`/api/user/api-key?userId=${user.uid}`);
+            const data = await res.json();
+            setHasApiKey(data.hasApiKey || false);
+        } catch (e) {
+            console.error("Failed to check API key", e);
+        }
+    };
 
     const loadMembers = async () => {
         if (!workspaceId) return;
@@ -45,10 +57,44 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
         setLoadingMembers(false);
     };
 
-    const handleSaveKey = () => {
-        localStorage.setItem("openrouter_api_key", apiKey);
-        localStorage.setItem("openrouter_model", model);
-        onClose();
+    const handleSaveKey = async () => {
+        if (!user) {
+            toast.error("Please log in to save API key");
+            return;
+        }
+
+        if (!apiKey.trim()) {
+            toast.error("Please enter a valid API key");
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/user/api-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    apiKey: apiKey.trim(),
+                    userId: user.uid
+                })
+            });
+
+            if (!res.ok) {
+                throw new Error('Failed to save API key');
+            }
+
+            // Save model preference to localStorage (not sensitive)
+            localStorage.setItem("openrouter_model", model);
+
+            // Clear API key input for security
+            setApiKey("");
+            setHasApiKey(true);
+
+            toast.success("API key saved securely!");
+            onClose();
+        } catch (e: any) {
+            console.error("Failed to save API key", e);
+            toast.error("Failed to save API key: " + e.message);
+        }
     };
 
     const handleInvite = async () => {
@@ -111,19 +157,25 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
                         <div>
                             <h2 className="text-xl font-bold mb-6">General Settings</h2>
                             <div className="mb-6">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                                     OpenRouter API Key
+                                    {hasApiKey && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">✓ Configured</span>}
                                 </label>
                                 <p className="text-xs text-gray-500 mb-2">
-                                    Stored locally for AI features.
+                                    Securely encrypted and stored in Firestore. Never exposed to client.
                                 </p>
                                 <input
                                     type="password"
                                     value={apiKey}
                                     onChange={(e) => setApiKey(e.target.value)}
-                                    placeholder="sk-or-..."
+                                    placeholder={hasApiKey ? "sk-or-... (already saved)" : "sk-or-..."}
                                     className="w-full p-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#111] rounded-lg focus:ring-2 focus:ring-black dark:focus:ring-white focus:outline-none"
                                 />
+                                {hasApiKey && (
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        Leave empty to keep existing key. Enter new key to update.
+                                    </p>
+                                )}
                             </div>
 
                             <div className="mb-6">
