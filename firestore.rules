@@ -3,27 +3,131 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Workspaces - read for members, write for owner
+    // ===== HELPER FUNCTIONS =====
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(resource) {
+      return isAuthenticated() && resource.data.ownerId == request.auth.uid;
+    }
+    
+    function canViewPage(resource) {
+      // Owner can always view
+      if (resource.data.permissions.owner == request.auth.uid) {
+        return true;
+      }
+      
+      // Shared users can view
+      if (request.auth.uid in resource.data.permissions.get('shared', {})) {
+        return true;
+      }
+      
+      // Public pages
+      if (resource.data.permissions.get('generalAccess', 'private') == 'public') {
+        return true;
+      }
+      
+      return false;
+    }
+    
+    function canEditPage(resource) {
+      // Owner can always edit
+      if (resource.data.permissions.owner == request.auth.uid) {
+        return true;
+      }
+      
+      // Editors can edit
+      if (request.auth.uid in resource.data.permissions.get('shared', {}) &&
+          resource.data.permissions.shared[request.auth.uid] == 'editor') {
+        return true;
+      }
+      
+      return false;
+    }
+    
+    // ===== WORKSPACES =====
+    
     match /workspaces/{workspaceId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      // Anyone authenticated can read (for now - will add permissions later)
+      allow read: if isAuthenticated();
+      
+      // Only authenticated users can create
+      allow create: if isAuthenticated();
+      
+      // Only owner can update/delete
+      allow update, delete: if isOwner(resource);
     }
     
-    // Pages - authenticated users can read/write
+    // ===== PAGES =====
+    
     match /pages/{pageId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      // Read if has view permission
+      allow read: if isAuthenticated() && canViewPage(resource);
+      
+      // Create if authenticated
+      allow create: if isAuthenticated();
+      
+      // Update if has edit permission
+      allow update: if isAuthenticated() && canEditPage(resource);
+      
+      // Delete only by owner
+      allow delete: if isAuthenticated() && resource.data.permissions.owner == request.auth.uid;
+      
+      // Page history (versions)
+      match /history/{versionId} {
+        allow read: if isAuthenticated() && canViewPage(get(/databases/$(database)/documents/pages/$(pageId)));
+        allow create: if isAuthenticated() && canEditPage(get(/databases/$(database)/documents/pages/$(pageId)));
+      }
+      
+      // Real-time presence
+      match /presence/{userId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated() && userId == request.auth.uid;
+      }
     }
     
-    // User私有数据 - 只有所有者可以访问
+    // ===== INVITATIONS =====
+    
+    match /invitations/{invitationId} {
+      // Can read if you're the inviter or invitee
+      allow read: if isAuthenticated() && (
+        resource.data.invitedBy == request.auth.uid ||
+        resource.data.email == request.auth.token.email
+      );
+      
+      // Can create if authenticated
+      allow create: if isAuthenticated();
+      
+      // Can update if you're the invitee (to accept/decline)
+      allow update: if isAuthenticated() && resource.data.email == request.auth.token.email;
+      
+      // Can delete if you're the inviter
+      allow delete: if isAuthenticated() && resource.data.invitedBy == request.auth.uid;
+    }
+    
+    // ===== USER PRIVATE DATA =====
+    
     match /users/{userId}/private/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Only the user can access their private data
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Public user profiles (if any)
+   // ===== USER PUBLIC PROFILES =====
+    
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Anyone authenticated can read profiles
+      allow read: if isAuthenticated();
+      
+      // Users can only write their own profile
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // ===== AI HISTORY (for future feature) =====
+    
+    match /users/{userId}/private/ai_history/{historyId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
   }
 }
