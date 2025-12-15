@@ -25,13 +25,15 @@ export default function SearchModal({ isOpen, onClose, pages, workspaceId }: Sea
         }
     }, [isOpen]);
 
-    // Close on escape
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose();
+            if (e.key === 'Escape') {
+                onClose();
+            }
         };
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
 
     // Filter pages
@@ -43,8 +45,14 @@ export default function SearchModal({ isOpen, onClose, pages, workspaceId }: Sea
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/40 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+        <div
+            className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/40 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={onClose}
+        >
             <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="search-modal-title"
                 className="w-full max-w-2xl bg-white dark:bg-[#1E1E1E] rounded-xl shadow-2xl overflow-hidden border border-transparent dark:border-gray-800 flex flex-col max-h-[60vh] animate-in zoom-in-95 slide-in-from-top-2 duration-200"
                 onClick={e => e.stopPropagation()}
             >
@@ -58,8 +66,13 @@ export default function SearchModal({ isOpen, onClose, pages, workspaceId }: Sea
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search for a page..."
                         className="flex-1 bg-transparent text-lg placeholder:text-gray-400 focus:outline-none dark:text-gray-100"
+                        id="search-modal-title"
                     />
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <button
+                        onClick={onClose}
+                        aria-label="Close search"
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                    >
                         <X size={20} />
                     </button>
                 </div>

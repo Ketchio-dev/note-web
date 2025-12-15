@@ -73,17 +73,26 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
         <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-2 font-sans">
             {/* Modal */}
             {isOpen && (
-                <div className="bg-white dark:bg-[#1C1C1C] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 w-[400px] h-[500px] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="ai-assistant-title"
+                    className="absolute bottom-16 right-0 w-[500px] h-[600px] bg-white dark:bg-[#1C1C1C] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300"
+                >
                     {/* Header */}
-                    <div className="relative flex justify-between items-center p-3 border-b border-gray-100 dark:border-gray-800">
-                        <ModelSelector model={model} onModelChange={handleModelChange} />
-
-                        <div className="flex gap-2">
-                            <button onClick={() => setMessages([])} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1" title="Clear Chat">
-                                <Zap size={14} />
-                            </button>
-                            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1">
-                                <X size={16} />
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-[#1C1C1C]">
+                        <div className="flex items-center gap-2">
+                            <Sparkles size={20} className="text-purple-600" />
+                            <h2 id="ai-assistant-title" className="font-semibold text-gray-900 dark:text-gray-100">AI Assistant</h2>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <ModelSelector model={model} onModelChange={handleModelChange} />
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                aria-label="Close AI assistant"
+                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                            >
+                                <X size={18} />
                             </button>
                         </div>
                     </div>
@@ -173,6 +182,7 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
             {/* Fab */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
+                aria-label={isOpen ? "Close AI assistant" : "Open AI assistant"}
                 className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all border border-gray-200 dark:border-gray-700 ${isOpen ? "bg-white text-black rotate-90" : "bg-white hover:bg-gray-50 text-black hover:scale-105"
                     }`}
                 style={isOpen ? { boxShadow: 'none' } : {}}

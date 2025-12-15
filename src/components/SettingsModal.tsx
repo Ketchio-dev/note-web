@@ -118,12 +118,30 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
 
     if (!isOpen) return null;
 
+    // Esc key handler
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            onClose();
+        }
+    };
+
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-white dark:bg-[#1C1C1C] rounded-xl shadow-xl w-full max-w-2xl h-[500px] flex overflow-hidden border border-gray-200 dark:border-gray-800">
+        <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            onClick={onClose}
+        >
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="settings-title"
+                className="bg-white dark:bg-[#1C1C1C] rounded-xl shadow-xl w-full max-w-2xl h-[500px] flex overflow-hidden border border-gray-200 dark:border-gray-800"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={handleKeyDown}
+                tabIndex={-1}
+            >
                 {/* Sidebar */}
                 <div className="w-48 bg-gray-50 dark:bg-[#202020] border-r border-gray-100 dark:border-gray-800 p-4 flex flex-col gap-2">
-                    <h2 className="text-sm font-bold text-gray-400 mb-2 uppercase px-2">Settings</h2>
+                    <h2 id="settings-title" className="text-sm font-bold text-gray-400 mb-2 uppercase px-2">Settings</h2>
                     <button
                         onClick={() => setActiveTab('general')}
                         className={`text-left px-3 py-2 rounded text-sm flex items-center gap-2 ${activeTab === 'general' ? 'bg-gray-200 dark:bg-gray-700 font-medium text-black dark:text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
@@ -149,7 +167,11 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
 
                 {/* Content */}
                 <div className="flex-1 p-8 relative flex flex-col text-gray-900 dark:text-gray-100">
-                    <button onClick={onClose} className="absolute right-4 top-4 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-400 hover:text-black dark:hover:text-white">
+                    <button
+                        onClick={onClose}
+                        aria-label="Close settings"
+                        className="absolute right-4 top-4 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-400 hover:text-black dark:hover:text-white"
+                    >
                         <X size={20} />
                     </button>
 
