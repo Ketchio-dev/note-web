@@ -11,6 +11,7 @@ import SettingsModal from "@/components/SettingsModal";
 import PageMenu from "@/components/PageMenu";
 import CollaborationDrawer from "@/components/CollaborationDrawer"; // Import Drawer
 import SharePopover from "@/components/SharePopover"; // Import SharePopover
+import PresenceAvatars from "@/components/PresenceAvatars";
 import { Share, MoreHorizontal, FileText, Table as TableIcon, Layout } from "lucide-react";
 import { serverTimestamp } from "firebase/firestore";
 
@@ -180,6 +181,13 @@ export default function PageEditor() {
                         </button>
                         <span className="text-xs text-gray-300">|</span>
                         <span className="text-xs">{saving ? "Saving..." : "Saved"}</span>
+                    </div>
+
+                    {/* Center: Presence Avatars */}
+                    <div className="flex-1 flex justify-center">
+                        {user && (
+                            <PresenceAvatars pageId={pageId} userId={user.uid} />
+                        )}
                     </div>
 
                     {/* Right Actions */}
