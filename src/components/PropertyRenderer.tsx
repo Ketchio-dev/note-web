@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Page } from '@/lib/workspace';
 import { evaluateFormula, formatFormulaResult } from '@/lib/formula-engine';
 import { format, parseISO } from 'date-fns';
@@ -31,7 +31,7 @@ const COLORS = [
     { id: 'red', name: 'Red', bg: 'bg-red-100 dark:bg-red-900', text: 'text-red-800 dark:text-red-200' },
 ];
 
-export default function PropertyRenderer({
+function PropertyRenderer({
     property,
     value,
     onChange,
@@ -405,3 +405,14 @@ export default function PropertyRenderer({
         </div>
     );
 }
+
+// Memoize to prevent unnecessary re-renders
+export default React.memo(PropertyRenderer, (prevProps, nextProps) => {
+    // Only re-render if property type, value, or readOnly changes
+    return (
+        prevProps.property.type === nextProps.property.type &&
+        prevProps.value === nextProps.value &&
+        prevProps.readOnly === nextProps.readOnly &&
+        prevProps.property.id === nextProps.property.id
+    );
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Page, createPage, subscribeToWorkspacePages, updatePage, deletePage, movePage } from "@/lib/workspace";
 import { ChevronRight, ChevronDown, FileText, Plus, Settings, Trash, MoreHorizontal, Star, Copy, Edit, ExternalLink, AppWindow, FolderInput, Home, Sun, Moon, Sparkles, Search, Layout, X, Calendar, Bell } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -134,21 +134,23 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
     const [invitationCount, setInvitationCount] = useState(0);
 
-    // Initial Sort helper: client-side sort
-    const sortPages = (rawPages: Page[]) => {
-        return [...rawPages].sort((a, b) => {
-            const orderA = a.order ?? (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
-            const orderB = b.order ?? (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
-            return orderA - orderB;
-        });
-    };
+    // Memoize sortPages function to avoid recreating on every render
+    const sortPages = useMemo(() => {
+        return (rawPages: Page[]) => {
+            return [...rawPages].sort((a, b) => {
+                const orderA = a.order ?? (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
+                const orderB = b.order ?? (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
+                return orderA - orderB;
+            });
+        };
+    }, []);
 
     useEffect(() => {
         const unsubscribe = subscribeToWorkspacePages(workspaceId, (fetchedPages) => {
             setPages(sortPages(fetchedPages));
         });
         return () => unsubscribe();
-    }, [workspaceId]);
+    }, [workspaceId, sortPages]);
 
     // Listen to invitations count
     useEffect(() => {

@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import { DatabaseTemplate } from '@/lib/database-templates';
 
 interface TemplateCardProps {
@@ -19,7 +20,7 @@ const COLOR_CLASSES: Record<string, string> = {
     brown: 'bg-amber-100 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
 };
 
-export default function TemplateCard({ template, onClick }: TemplateCardProps) {
+function TemplateCard({ template, onClick }: TemplateCardProps) {
     const colorClass = COLOR_CLASSES[template.color] || COLOR_CLASSES.gray;
 
     return (
@@ -68,3 +69,6 @@ export default function TemplateCard({ template, onClick }: TemplateCardProps) {
         </button>
     );
 }
+
+// Memoize to prevent unnecessary re-renders
+export default React.memo(TemplateCard);

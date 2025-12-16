@@ -180,7 +180,7 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
         }
     }, [columns, onUpdateParent]);
 
-    const moveProperty = async (propId: string, direction: 'left' | 'right') => {
+    const moveProperty = useCallback(async (propId: string, direction: 'left' | 'right') => {
         const index = columns.findIndex(c => c.id === propId);
         if (index === -1) return;
 
@@ -193,7 +193,7 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
 
         await onUpdateParent({ properties: reordered });
         setActivePropertyMenu(null);
-    };
+    }, [columns, onUpdateParent]);
 
     return (
         <div className="w-full overflow-x-auto pb-20 pl-4 md:pl-0">
