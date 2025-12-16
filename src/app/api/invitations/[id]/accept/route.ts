@@ -125,8 +125,9 @@ export async function POST(
             ...result
         });
 
-    } catch (error: any) {
-        console.error('Accept Invitation Error:', error);
+    } catch (error) {
+        const err = error as Error;
+        console.error('Accept Invitation Error:', err);
 
         // Specific error messages and status codes
         const errorMap: Record<string, { message: string; status: number }> = {
@@ -138,8 +139,8 @@ export async function POST(
             'INVITATION_EXPIRED': { message: 'Invitation has expired', status: 410 },
         };
 
-        const errorInfo = errorMap[error.message] || {
-            message: error.message || 'Internal Server Error',
+        const errorInfo = errorMap[err.message] || {
+            message: err.message || 'Internal Server Error',
             status: 500
         };
 

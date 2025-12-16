@@ -81,10 +81,11 @@ export async function POST(
             message: 'Invitation rejected successfully'
         });
 
-    } catch (error: any) {
-        console.error('Reject invitation error:', error);
+    } catch (error) {
+        const err = error as Error;
+        console.error('Reject invitation error:', err);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }
