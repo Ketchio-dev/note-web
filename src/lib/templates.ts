@@ -1,21 +1,21 @@
 export interface Template {
-    id: string;
-    name: string;
-    description: string;
-    category: 'work' | 'personal' | 'productivity' | 'engineering';
-    icon: string;
-    content: string;
-    tags: string[];
+  id: string;
+  name: string;
+  description: string;
+  category: 'work' | 'personal' | 'productivity' | 'engineering';
+  icon: string;
+  content: string;
+  tags: string[];
 }
 
 export const TEMPLATES: Template[] = [
-    {
-        id: 'project-dashboard',
-        name: 'Project Dashboard',
-        description: 'Comprehensive project tracking with metrics and status',
-        category: 'work',
-        icon: '📊',
-        content: `<h1>📊 Project Dashboard: {{title}}</h1>
+  {
+    id: 'project-dashboard',
+    name: 'Project Dashboard',
+    description: 'Comprehensive project tracking with metrics and status',
+    category: 'work',
+    icon: '📊',
+    content: `<h1>📊 Project Dashboard: {{title}}</h1>
 <p><strong>Last Updated:</strong> {{date}}</p>
 <hr>
 
@@ -69,15 +69,15 @@ export const TEMPLATES: Template[] = [
   <li><strong>Beta Release</strong> - 2 weeks</li>
   <li><strong>GA Launch</strong> - 4 weeks</li>
 </ol>`,
-        tags: ['project', 'dashboard', 'tracking', 'metrics']
-    },
-    {
-        id: 'sprint-planning',
-        name: 'Sprint Planning',
-        description: 'Agile sprint planning with backlog and capacity',
-        category: 'work',
-        icon: '🏃',
-        content: `<h1>🏃 Sprint {{title}}</h1>
+    tags: ['project', 'dashboard', 'tracking', 'metrics']
+  },
+  {
+    id: 'sprint-planning',
+    name: 'Sprint Planning',
+    description: 'Agile sprint planning with backlog and capacity',
+    category: 'work',
+    icon: '🏃',
+    content: `<h1>🏃 Sprint {{title}}</h1>
 <p><strong>Sprint Goal:</strong> <em>Enter sprint goal here</em></p>
 <p><strong>Duration:</strong> {{date}} - 2 weeks</p>
 <hr>
@@ -134,15 +134,15 @@ export const TEMPLATES: Template[] = [
 <p><strong>Monday:</strong></p>
 <p><strong>Tuesday:</strong></p>
 <p><strong>Wednesday:</strong></p>`,
-        tags: ['sprint', 'agile', 'planning', 'scrum']
-    },
-    {
-        id: 'okr-template',
-        name: 'OKR Tracker',
-        description: 'Objectives and Key Results framework',
-        category: 'work',
-        icon: '🎯',
-        content: `<h1>🎯 OKRs - Q{{title}}</h1>
+    tags: ['sprint', 'agile', 'planning', 'scrum']
+  },
+  {
+    id: 'okr-template',
+    name: 'OKR Tracker',
+    description: 'Objectives and Key Results framework',
+    category: 'work',
+    icon: '🎯',
+    content: `<h1>🎯 OKRs - Q{{title}}</h1>
 <p><strong>Quarter:</strong> {{date}}</p>
 <p><strong>Owner:</strong> Team/Individual</p>
 <hr>
@@ -200,15 +200,15 @@ export const TEMPLATES: Template[] = [
   <li data-type="taskItem" data-checked="false"><p><strong>KR1:</strong> </p></li>
   <li data-type="taskItem" data-checked="false"><p><strong>KR2:</strong> </p></li>
 </ul>`,
-        tags: ['okr', 'goals', 'objectives', 'strategy']
-    },
-    {
-        id: 'research-note',
-        name: 'Research Notes',
-        description: 'Academic/technical research documentation',
-        category: 'personal',
-        icon: '🔬',
-        content: `<h1>🔬 Research: {{title}}</h1>
+    tags: ['okr', 'goals', 'objectives', 'strategy']
+  },
+  {
+    id: 'research-note',
+    name: 'Research Notes',
+    description: 'Academic/technical research documentation',
+    category: 'personal',
+    icon: '🔬',
+    content: `<h1>🔬 Research: {{title}}</h1>
 <p><strong>Date:</strong> {{date}}</p>
 <p><strong>Researcher:</strong> </p>
 <hr>
@@ -265,15 +265,15 @@ export const TEMPLATES: Template[] = [
   <li data-type="taskItem" data-checked="false"><p>Further investigation needed in area X</p></li>
   <li data-type="taskItem" data-checked="false"><p>Validate hypothesis Y</p></li>
 </ul>`,
-        tags: ['research', 'academic', 'science', 'study']
-    },
-    {
-        id: 'class-notes',
-        name: 'Class Notes',
-        description: 'Structured lecture/class notes',
-        category: 'personal',
-        icon: '🎓',
-        content: `<h1>🎓 {{title}}</h1>
+    tags: ['research', 'academic', 'science', 'study']
+  },
+  {
+    id: 'class-notes',
+    name: 'Class Notes',
+    description: 'Structured lecture/class notes',
+    category: 'personal',
+    icon: '🎓',
+    content: `<h1>🎓 {{title}}</h1>
 <p><strong>Date:</strong> {{date}}</p>
 <p><strong>Instructor:</strong> </p>
 <p><strong>Topic:</strong> </p>
@@ -321,15 +321,15 @@ function example() {
   <li>Textbook: Chapter X</li>
   <li>Online resource: </li>
 </ul>`,
-        tags: ['education', 'class', 'lecture', 'study']
-    },
-    {
-        id: 'product-spec',
-        name: 'Product Spec',
-        description: 'Product requirements document (PRD)',
-        category: 'engineering',
-        icon: '📱',
-        content: `<h1>📱 Product Spec: {{title}}</h1>
+    tags: ['education', 'class', 'lecture', 'study']
+  },
+  {
+    id: 'product-spec',
+    name: 'Product Spec',
+    description: 'Product requirements document (PRD)',
+    category: 'engineering',
+    icon: '📱',
+    content: `<h1>📱 Product Spec: {{title}}</h1>
 <p><strong>Author:</strong> </p>
 <p><strong>Date:</strong> {{date}}</p>
 <p><strong>Status:</strong> <mark>Draft</mark></p>
@@ -399,15 +399,15 @@ function example() {
   <li data-type="taskItem" data-checked="false"><p>Beta with 100 users - Week 3</p></li>
   <li data-type="taskItem" data-checked="false"><p>GA Launch - Week 6</p></li>
 </ul>`,
-        tags: ['product', 'spec', 'prd', 'requirements']
-    },
-    {
-        id: 'design-review',
-        name: 'Design Review',
-        description: 'Technical design document',
-        category: 'engineering',
-        icon: '🏗️',
-        content: `<h1>🏗️ Design Review: {{title}}</h1>
+    tags: ['product', 'spec', 'prd', 'requirements']
+  },
+  {
+    id: 'design-review',
+    name: 'Design Review',
+    description: 'Technical design document',
+    category: 'engineering',
+    icon: '🏗️',
+    content: `<h1>🏗️ Design Review: {{title}}</h1>
 <p><strong>Author:</strong> </p>
 <p><strong>Date:</strong> {{date}}</p>
 <p><strong>Reviewers:</strong> </p>
@@ -492,15 +492,15 @@ function example() {
   <li data-type="taskItem" data-checked="false"><p>Scalability validated</p></li>
   <li data-type="taskItem" data-checked="false"><p>Monitoring plan in place</p></li>
 </ul>`,
-        tags: ['design', 'architecture', 'technical', 'engineering']
-    },
-    {
-        id: 'bug-report',
-        name: 'Bug Report',
-        description: 'Detailed bug documentation',
-        category: 'engineering',
-        icon: '🐛',
-        content: `<h1>🐛 Bug Report: {{title}}</h1>
+    tags: ['design', 'architecture', 'technical', 'engineering']
+  },
+  {
+    id: 'bug-report',
+    name: 'Bug Report',
+    description: 'Detailed bug documentation',
+    category: 'engineering',
+    icon: '🐛',
+    content: `<h1>🐛 Bug Report: {{title}}</h1>
 <p><strong>Reporter:</strong> </p>
 <p><strong>Date:</strong> {{date}}</p>
 <p><strong>Severity:</strong> <mark>High/Medium/Low</mark></p>
@@ -560,15 +560,15 @@ function example() {
 <ul>
   <li>#123 - Similar error in different context</li>
 </ul>`,
-        tags: ['bug', 'issue', 'debugging', 'engineering']
-    },
-    {
-        id: 'daily-standup',
-        name: 'Daily Standup',
-        description: 'Quick daily team sync',
-        category: 'work',
-        icon: '☀️',
-        content: `<h1>☀️ Daily Standup - {{date}}</h1>
+    tags: ['bug', 'issue', 'debugging', 'engineering']
+  },
+  {
+    id: 'daily-standup',
+    name: 'Daily Standup',
+    description: 'Quick daily team sync',
+    category: 'work',
+    icon: '☀️',
+    content: `<h1>☀️ Daily Standup - {{date}}</h1>
 <hr>
 
 <h2>👤 Team Member 1</h2>
@@ -613,15 +613,15 @@ function example() {
 <ul data-type="taskList">
   <li data-type="taskItem" data-checked="false"><p>Follow up on blocker X</p></li>
 </ul>`,
-        tags: ['standup', 'daily', 'team', 'agile']
-    },
-    {
-        id: 'customer-feedback',
-        name: 'Customer Feedback',
-        description: 'Track and analyze user feedback',
-        category: 'work',
-        icon: '💬',
-        content: `<h1>💬 Customer Feedback - {{date}}</h1>
+    tags: ['standup', 'daily', 'team', 'agile']
+  },
+  {
+    id: 'customer-feedback',
+    name: 'Customer Feedback',
+    description: 'Track and analyze user feedback',
+    category: 'work',
+    icon: '💬',
+    content: `<h1>💬 Customer Feedback - {{date}}</h1>
 <p><strong>Source:</strong> Support ticket / Survey / Interview</p>
 <hr>
 
@@ -684,15 +684,15 @@ function example() {
   <li data-type="taskItem" data-checked="false"><p>Add feature request to backlog</p></li>
   <li data-type="taskItem" data-checked="false"><p>File bug ticket</p></li>
 </ul>`,
-        tags: ['feedback', 'customer', 'product', 'insights']
-    },
-    {
-        id: 'weekly-goals',
-        name: 'Weekly Goals',
-        description: 'Personal productivity & goal tracking',
-        category: 'personal',
-        icon: '🎯',
-        content: `<h1>🎯 Week of {{date}}</h1>
+    tags: ['feedback', 'customer', 'product', 'insights']
+  },
+  {
+    id: 'weekly-goals',
+    name: 'Weekly Goals',
+    description: 'Personal productivity & goal tracking',
+    category: 'personal',
+    icon: '🎯',
+    content: `<h1>🎯 Week of {{date}}</h1>
 <hr>
 
 <h2>🌟 Top 3 Priorities</h2>
@@ -742,15 +742,15 @@ function example() {
 <blockquote>
   <p>Biggest achievement</p>
 </blockquote>`,
-        tags: ['goals', 'personal', 'weekly', 'productivity']
-    },
-    {
-        id: 'decision-matrix',
-        name: 'Decision Matrix',
-        description: 'Structured decision-making framework',
-        category: 'productivity',
-        icon: '⚖️',
-        content: `<h1>⚖️ Decision: {{title}}</h1>
+    tags: ['goals', 'personal', 'weekly', 'productivity']
+  },
+  {
+    id: 'decision-matrix',
+    name: 'Decision Matrix',
+    description: 'Structured decision-making framework',
+    category: 'productivity',
+    icon: '⚖️',
+    content: `<h1>⚖️ Decision: {{title}}</h1>
 <p><strong>Decision Date:</strong> {{date}}</p>
 <p><strong>Decision Maker:</strong> </p>
 <p><strong>Deadline:</strong> </p>
@@ -828,53 +828,53 @@ function example() {
   <li data-type="taskItem" data-checked="false"><p>Step 2: </p></li>
   <li data-type="taskItem" data-checked="false"><p>Step 3: </p></li>
 </ul>`,
-        tags: ['decision', 'framework', 'analysis', 'productivity']
-    }
+    tags: ['decision', 'framework', 'analysis', 'productivity']
+  }
 ];
 
 // Helper function to render template with variables
 export function renderTemplate(
-    template: Template,
-    variables: Record<string, string> = {}
+  template: Template,
+  variables: Record<string, string> = {}
 ): string {
-    let content = template.content;
+  let content = template.content;
 
-    // Default variables
-    const defaults = {
-        date: new Date().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        }),
-        time: new Date().toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit'
-        }),
-        title: 'Untitled'
-    };
+  // Default variables
+  const defaults = {
+    date: new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }),
+    time: new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
+    title: 'Untitled'
+  };
 
-    const allVars = { ...defaults, ...variables };
+  const allVars = { ...defaults, ...variables };
 
-    // Replace all {{variable}}
-    Object.entries(allVars).forEach(([key, value]) => {
-        const regex = new RegExp(`{{${key}}}`, 'g');
-        content = content.replace(regex, value);
-    });
+  // Replace all {{variable}}
+  Object.entries(allVars).forEach(([key, value]) => {
+    const regex = new RegExp(`{{${key}}}`, 'g');
+    content = content.replace(regex, value);
+  });
 
-    return content;
+  return content;
 }
 
 // Get templates by category
 export function getTemplatesByCategory(category: Template['category']): Template[] {
-    return TEMPLATES.filter(t => t.category === category);
+  return TEMPLATES.filter(t => t.category === category);
 }
 
 // Search templates
 export function searchTemplates(query: string): Template[] {
-    const lowerQuery = query.toLowerCase();
-    return TEMPLATES.filter(t =>
-        t.name.toLowerCase().includes(lowerQuery) ||
-        t.description.toLowerCase().includes(lowerQuery) ||
-        t.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
-    );
+  const lowerQuery = query.toLowerCase();
+  return TEMPLATES.filter(t =>
+    t.name.toLowerCase().includes(lowerQuery) ||
+    t.description.toLowerCase().includes(lowerQuery) ||
+    t.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+  );
 }

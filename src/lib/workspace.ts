@@ -48,7 +48,7 @@ export interface Page {
         name: string;
         type: 'text' | 'number' | 'select' | 'multi-select' | 'date' | 'person' |
         'files' | 'checkbox' | 'url' | 'email' | 'phone' | 'formula' |
-        'relation' | 'rollup' | 'created_time' | 'created_by' | 'last_edited_time' | 'last_edited_by';
+        'relation' | 'rollup' | 'created_time' | 'created_by' | 'last_edited_time' | 'last_edited_by' | 'progress';
         // For select/multi-select
         options?: { id: string; name: string; color: string }[];
         // For formula
@@ -59,6 +59,9 @@ export interface Page {
         rollupRelation?: string; // Relation property ID
         rollupProperty?: string; // Property to rollup
         rollupFunction?: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'show_original';
+        // For progress
+        max?: number; // Maximum value for progress (default: 100)
+        progressColor?: string; // Color for progress bar
     }[];
     propertyValues?: Record<string, any>; // Keyed by property ID
 

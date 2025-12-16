@@ -82,7 +82,7 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
         const name = prompt("Column name?");
         if (!name) return;
 
-        const type = prompt("Property type?\n\nOptions: text, number, select, multi-select, date, checkbox, url, email, phone, formula, person, files, relation, rollup") || 'text';
+        const type = prompt("Property type?\n\nOptions: text, number, select, multi-select, date, checkbox, url, email, phone, formula, person, files, relation, rollup, progress") || 'text';
 
         const newCol: any = {
             id: crypto.randomUUID(),

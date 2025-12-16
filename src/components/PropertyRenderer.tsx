@@ -316,6 +316,60 @@ export default function PropertyRenderer({
         );
     }
 
+    // Progress Bar
+    if (property.type === 'progress') {
+        const numValue = Number(value) || 0;
+        const max = property.max || 100;
+        const percentage = Math.min(100, Math.max(0, (numValue / max) * 100));
+        const color = property.progressColor || 'blue';
+
+        const colorClasses = {
+            blue: 'bg-blue-600',
+            green: 'bg-green-600',
+            yellow: 'bg-yellow-600',
+            red: 'bg-red-600',
+            purple: 'bg-purple-600',
+            pink: 'bg-pink-600'
+        };
+
+        return (
+            <div className="px-3 py-2">
+                {!readOnly ? (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="number"
+                            value={numValue}
+                            onChange={(e) => onChange(Number(e.target.value))}
+                            className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded bg-transparent"
+                            min={0}
+                            max={max}
+                        />
+                        <span className="text-xs text-gray-500">/ {max}</span>
+                        <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 min-w-[100px]">
+                            <div
+                                className={`${colorClasses[color as keyof typeof colorClasses] || colorClasses.blue} h-2 rounded-full transition-all duration-300`}
+                                style={{ width: `${percentage}%` }}
+                            />
+                        </div>
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400 min-w-[3rem] text-right">
+                            {Math.round(percentage)}%
+                        </span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                                className={`${colorClasses[color as keyof typeof colorClasses] || colorClasses.blue} h-2 rounded-full transition-all`}
+                                style={{ width: `${percentage}%` }}
+                            />
+                        </div>
+                        <span className="text-xs text-gray-500">{Math.round(percentage)}%</span>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     // Rollup (read-only, calculated from relations)
     if (property.type === 'rollup') {
         return (

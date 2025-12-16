@@ -3,6 +3,7 @@
 import { Page, updatePage } from '@/lib/workspace';
 import { FileText, MoreVertical, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import PropertyRenderer from './PropertyRenderer';
 
 interface GalleryViewProps {
     workspaceId: string;
@@ -58,18 +59,39 @@ export default function GalleryView({ workspaceId, parentPage, childPages }: Gal
                                 </h3>
 
                                 {/* Properties */}
-                                <div className="space-y-2">
-                                    {displayProperties.map(prop => {
-                                        const value = page.propertyValues?.[prop.id];
-                                        if (!value) return null;
+                                <div className="space-y-1">
+                                    {columns.slice(0, 3).map(col => {
+                                        const value = page.propertyValues?.[col.id];
+
+                                        // Special handling for progress bars in gallery
+                                        if (col.type === 'progress') {
+                                            const numValue = Number(value) || 0;
+                                            const max = col.max || 100;
+                                            const percentage = Math.min(100, Math.max(0, (numValue / max) * 100));
+
+                                            return (
+                                                <div key={col.id} className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500 min-w-[60px]">{col.name}</span>
+                                                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                                        <div
+                                                            className="bg-blue-600 h-1.5 rounded-full transition-all"
+                                                            style={{ width: `${percentage}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-xs text-gray-500 min-w-[3rem] text-right">{Math.round(percentage)}%</span>
+                                                </div>
+                                            );
+                                        }
 
                                         return (
-                                            <div key={prop.id} className="text-xs">
-                                                <span className="text-gray-500 dark:text-gray-400">{prop.name}: </span>
-                                                <span className="text-gray-700 dark:text-gray-300">
-                                                    {String(value).slice(0, 50)}
-                                                    {String(value).length > 50 && '...'}
-                                                </span>
+                                            <div key={col.id} className="flex items-center gap-2 text-sm">
+                                                <span className="text-gray-500 text-xs">{col.name}:</span>
+                                                <PropertyRenderer
+                                                    property={col}
+                                                    value={value}
+                                                    onChange={() => { }}
+                                                    readOnly
+                                                />
                                             </div>
                                         );
                                     })}
