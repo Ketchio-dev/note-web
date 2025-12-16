@@ -9,6 +9,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import SettingsModal from "./SettingsModal";
 import SearchModal from "./SearchModal";
+import TemplatePicker from "./TemplatePicker";
+import { Template, renderTemplate } from "@/lib/templates";
+import { toast } from "sonner";
 
 // DnD Kit
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, MeasuringStrategy, DragOverlay, defaultDropAnimationSideEffects, DragStartEvent, DragEndEvent, DragOverEvent } from '@dnd-kit/core';
@@ -116,8 +119,9 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, pageId: string } | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isTrashOpen, setIsTrashOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
+    const [isTrashOpen, setIsTrashOpen] = useState(false);
     const [selectedTrash, setSelectedTrash] = useState<Set<string>>(new Set());
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
@@ -286,6 +290,29 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
         }
     };
 
+    const handleTemplateSelect = async (template: Template) => {
+        const content = renderTemplate(template);
+        const newPage = await createPage(
+            workspaceId,
+            null,
+            template.name,
+            'page',
+            'workspace',
+            user?.uid
+        );
+        // Update with template content
+        await updatePage(newPage.id, { content, icon: template.icon });
+
+        // Show success toast
+        toast.success(`${template.icon} ${template.name} created!`, {
+            description: 'Your page is ready to use',
+            duration: 2000
+        });
+
+        router.push(`/workspace/${workspaceId}/${newPage.id}`);
+        setIsTemplatePickerOpen(false);
+    };
+
     const handleRestore = async (pageId: string) => {
         await updatePage(pageId, { inTrash: false, trashDate: null });
         if (selectedTrash.has(pageId)) {
@@ -423,6 +450,12 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
                 >
                     <Calendar size={16} className="text-pink-500" /> <span className="font-medium text-gray-900 dark:text-gray-200">Calendar</span>
                 </Link>
+                <button
+                    onClick={() => setIsTemplatePickerOpen(true)}
+                    className="flex items-center gap-3 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2C2C2C] rounded-md transition"
+                >
+                    <FileText size={16} className="text-blue-500" /> <span className="font-medium text-gray-900 dark:text-gray-200">New from Template</span>
+                </button>
             </div>
 
             <div className="flex-1 overflow-y-auto overflow-x-hidden pb-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
@@ -603,12 +636,17 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
                 </div>
             )}
 
-            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} initialTab="general" />
+            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
             <SearchModal
                 isOpen={isSearchOpen}
                 onClose={() => setIsSearchOpen(false)}
-                pages={pages.filter(p => !p.inTrash)}
+                pages={pages}
                 workspaceId={workspaceId}
+            />
+            <TemplatePicker
+                isOpen={isTemplatePickerOpen}
+                onSelect={handleTemplateSelect}
+                onClose={() => setIsTemplatePickerOpen(false)}
             />
         </div>
     );

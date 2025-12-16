@@ -10,11 +10,19 @@ interface TemplatePickerProps {
     onClose: () => void;
 }
 
-type Category = 'all' | 'work' | 'personal' | 'productivity';
+type Category = 'all' | 'work' | 'personal' | 'productivity' | 'engineering';
 
 export default function TemplatePicker({ isOpen, onSelect, onClose }: TemplatePickerProps) {
     const [category, setCategory] = useState<Category>('all');
     const [searchQuery, setSearchQuery] = useState('');
+
+    const categories: Array<{ id: Category; label: string }> = [
+        { id: 'all', label: 'All Templates' },
+        { id: 'work', label: 'Work' },
+        { id: 'personal', label: 'Personal' },
+        { id: 'productivity', label: 'Productivity' },
+        { id: 'engineering', label: 'Engineering' }
+    ];
 
     // Filter templates
     const filteredTemplates = useMemo(() => {
@@ -65,18 +73,13 @@ export default function TemplatePicker({ isOpen, onSelect, onClose }: TemplatePi
 
                     {/* Category Tabs */}
                     <div className="flex gap-2">
-                        {[
-                            { value: 'all' as const, label: 'All Templates' },
-                            { value: 'work' as const, label: 'Work' },
-                            { value: 'personal' as const, label: 'Personal' },
-                            { value: 'productivity' as const, label: 'Productivity' }
-                        ].map((cat) => (
+                        {categories.map((cat) => (
                             <button
-                                key={cat.value}
-                                onClick={() => setCategory(cat.value)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${category === cat.value
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                key={cat.id}
+                                onClick={() => setCategory(cat.id)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${category === cat.id
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                                     }`}
                             >
                                 {cat.label}

@@ -46,10 +46,31 @@ export interface Page {
     properties?: {
         id: string;
         name: string;
-        type: 'text' | 'number' | 'select' | 'date';
-        options?: string[]; // For select type
+        type: 'text' | 'number' | 'select' | 'multi-select' | 'date' | 'person' |
+        'files' | 'checkbox' | 'url' | 'email' | 'phone' | 'formula' |
+        'relation' | 'rollup' | 'created_time' | 'created_by' | 'last_edited_time' | 'last_edited_by';
+        // For select/multi-select
+        options?: { id: string; name: string; color: string }[];
+        // For formula
+        formula?: string;
+        // For relation
+        relationTo?: string; // Target database ID
+        // For rollup
+        rollupRelation?: string; // Relation property ID
+        rollupProperty?: string; // Property to rollup
+        rollupFunction?: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'show_original';
     }[];
     propertyValues?: Record<string, any>; // Keyed by property ID
+
+    // Saved Views for databases
+    savedViews?: {
+        id: string;
+        name: string;
+        viewType: 'table' | 'list' | 'board' | 'gallery' | 'calendar' | 'timeline' | 'chart';
+        filters?: any;
+        sorts?: any[];
+        isDefault?: boolean;
+    }[];
 
     // Page Options
     font?: 'default' | 'serif' | 'mono';

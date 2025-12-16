@@ -16,9 +16,11 @@ interface AIAssistantProps {
     onReplaceContent: (content: string) => void;
     editorContent: string;
     workspaceId: string;
+    initialPrompt?: string;
+    onPromptUsed?: () => void;
 }
 
-export default function AIAssistant({ onInsertContent, onReplaceContent, editorContent, workspaceId }: AIAssistantProps) {
+export default function AIAssistant({ onInsertContent, onReplaceContent, editorContent, workspaceId, initialPrompt, onPromptUsed }: AIAssistantProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [contextMenuOpen, setContextMenuOpen] = useState(false);
 
@@ -60,6 +62,15 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
         onReplaceContent,
         availablePages
     });
+
+    // Handle initial prompt
+    useEffect(() => {
+        if (initialPrompt && initialPrompt.length > 0) {
+            setInput(initialPrompt);
+            setIsOpen(true);
+            onPromptUsed?.();
+        }
+    }, [initialPrompt, setInput, setIsOpen, onPromptUsed]);
 
     const handleAddContext = (page: Page) => {
         if (!selectedContext.find(p => p.id === page.id)) {
@@ -138,6 +149,7 @@ export default function AIAssistant({ onInsertContent, onReplaceContent, editorC
                                     content={m.content}
                                     reasoning={m.reasoning}
                                     onInsertContent={onInsertContent}
+                                    onReplaceContent={onReplaceContent}
                                 />
                             ))
                         )}

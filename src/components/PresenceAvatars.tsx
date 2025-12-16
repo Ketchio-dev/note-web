@@ -6,10 +6,12 @@ import { usePresence, PresenceUser } from '@/hooks/usePresence';
 interface PresenceAvatarsProps {
     pageId: string;
     userId: string;
+    userName?: string;
+    userAvatar?: string;
 }
 
-export default function PresenceAvatars({ pageId, userId }: PresenceAvatarsProps) {
-    const { activeUsers } = usePresence(pageId, userId);
+export default function PresenceAvatars({ pageId, userId, userName, userAvatar }: PresenceAvatarsProps) {
+    const { activeUsers } = usePresence(pageId, userId, userName, userAvatar);
 
     if (activeUsers.length === 0) return null;
 

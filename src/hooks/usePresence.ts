@@ -25,7 +25,12 @@ export interface PresenceUser {
  * Real-time presence hook for collaborative editing
  * Shows who's currently viewing/editing the page
  */
-export function usePresence(pageId: string | null, userId: string | null) {
+export function usePresence(
+    pageId: string | null,
+    userId: string | null,
+    userName?: string,
+    userAvatar?: string
+) {
     const [activeUsers, setActiveUsers] = useState<PresenceUser[]>([]);
 
     useEffect(() => {
@@ -41,7 +46,8 @@ export function usePresence(pageId: string | null, userId: string | null) {
             try {
                 await setDoc(presenceRef, {
                     userId,
-                    userName: 'Current User', // TODO: Get from auth context
+                    userName: userName || 'Anonymous',
+                    userAvatar: userAvatar,
                     color: userColor,
                     lastSeen: serverTimestamp()
                 }, { merge: true });
@@ -88,7 +94,7 @@ export function usePresence(pageId: string | null, userId: string | null) {
             unsubscribe();
             deleteDoc(presenceRef).catch(console.error);
         };
-    }, [pageId, userId]);
+    }, [pageId, userId, userName, userAvatar]);
 
     return { activeUsers };
 }

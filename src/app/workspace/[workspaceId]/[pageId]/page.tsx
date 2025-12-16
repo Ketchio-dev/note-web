@@ -12,7 +12,8 @@ import PageMenu from "@/components/PageMenu";
 import CollaborationDrawer from "@/components/CollaborationDrawer"; // Import Drawer
 import SharePopover from "@/components/SharePopover"; // Import SharePopover
 import PresenceAvatars from "@/components/PresenceAvatars";
-import { Share, MoreHorizontal, FileText, Table as TableIcon, Layout } from "lucide-react";
+import AITaskMenu, { AITask } from "@/components/ai/AITaskMenu";
+import { Sparkles, Share, MoreHorizontal, FileText, Table as TableIcon, Layout } from "lucide-react";
 import { serverTimestamp } from "firebase/firestore";
 
 export default function PageEditor() {
@@ -35,6 +36,13 @@ export default function PageEditor() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isUpdatesOpen, setIsUpdatesOpen] = useState(false); // Drawer State
     const [isShareOpen, setIsShareOpen] = useState(false); // Share Popover State
+
+    // AI Task Menu state
+    const [selectedText, setSelectedText] = useState<string>("");
+    const [selectionPos, setSelectionPos] = useState<{ x: number; y: number } | null>(null);
+    const [showAIButton, setShowAIButton] = useState(false);
+    const [showAITaskMenu, setShowAITaskMenu] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState<string>("");
 
     // Editor Ref
     const editorRef = useRef<EditorHandle>(null);
@@ -180,13 +188,30 @@ export default function PageEditor() {
                             <span className="font-medium">{page.type === 'database' ? "Table" : "Page"}</span>
                         </button>
                         <span className="text-xs text-gray-300">|</span>
-                        <span className="text-xs">{saving ? "Saving..." : "Saved"}</span>
+                        <div className="flex items-center gap-1">
+                            {saving ? (
+                                <>
+                                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                                    <span className="text-xs text-yellow-600 dark:text-yellow-500">Saving...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                    <span className="text-xs text-green-600 dark:text-green-500">Saved</span>
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     {/* Center: Presence Avatars */}
                     <div className="flex-1 flex justify-center">
                         {user && (
-                            <PresenceAvatars pageId={pageId} userId={user.uid} />
+                            <PresenceAvatars
+                                pageId={pageId}
+                                userId={user.uid}
+                                userName={user.displayName || user.email || undefined}
+                                userAvatar={user.photoURL || undefined}
+                            />
                         )}
                     </div>
 
@@ -241,21 +266,83 @@ export default function PageEditor() {
                     />
                 ) : (
                     <div className={page.locked ? "pointer-events-none opacity-80" : ""}>
-                        {/* Use EditorComponent alias to avoid name conflict if any */}
                         <Editor
                             ref={editorRef}
                             content={content}
                             onChange={setContent}
+                            onSelection={(selection) => {
+                                if (selection && selection.text.length > 3) {
+                                    setSelectedText(selection.text);
+                                    // Get position from current selection
+                                    const rect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
+                                    if (rect) {
+                                        setSelectionPos({
+                                            x: rect.left + (rect.width / 2),
+                                            y: rect.bottom + 8
+                                        });
+                                        setShowAIButton(true);
+                                    }
+                                } else {
+                                    setShowAIButton(false);
+                                    setShowAITaskMenu(false);
+                                }
+                            }}
                         />
                         <AIAssistant
                             workspaceId={workspaceId}
                             editorContent={content}
+                            initialPrompt={aiPrompt}
+                            onPromptUsed={() => setAiPrompt("")}
                             onInsertContent={(text) => {
                                 if (editorRef.current) editorRef.current.insertContent(text);
                                 else setContent(prev => prev + text);
                             }}
                             onReplaceContent={(text) => setContent(text)}
                         />
+
+                        {/* Floating AI Button */}
+                        {showAIButton && selectionPos && !showAITaskMenu && (
+                            <button
+                                className="fixed z-50 flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-lg transition-all animate-in fade-in zoom-in duration-200"
+                                style={{
+                                    left: `${selectionPos.x}px`,
+                                    top: `${selectionPos.y}px`,
+                                    transform: 'translateX(-50%)'
+                                }}
+                                onClick={() => setShowAITaskMenu(true)}
+                            >
+                                <Sparkles size={14} />
+                                <span className="text-sm font-medium">Ask AI</span>
+                            </button>
+                        )}
+
+                        {/* AI Task Menu */}
+                        {showAITaskMenu && selectionPos && (
+                            <AITaskMenu
+                                selectedText={selectedText}
+                                position={selectionPos}
+                                onTaskSelect={(task, prompt) => {
+                                    // Enhance prompt with page context
+                                    const enhancedPrompt = `${prompt}
+
+---
+CONTEXT:
+Page: "${page.title || 'Untitled'}"
+Selected text length: ${selectedText.length} characters
+
+SELECTED TEXT:
+${selectedText}`;
+
+                                    // Set enhanced prompt to trigger AI Assistant
+                                    setAiPrompt(enhancedPrompt);
+                                    setShowAITaskMenu(false);
+                                    setShowAIButton(false);
+                                }}
+                                onClose={() => {
+                                    setShowAITaskMenu(false);
+                                }}
+                            />
+                        )}
                     </div>
                 )}
             </div>

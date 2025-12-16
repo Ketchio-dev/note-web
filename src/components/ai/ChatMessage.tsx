@@ -8,9 +8,10 @@ interface ChatMessageProps {
     content: string;
     reasoning?: string;
     onInsertContent: (content: string) => void;
+    onReplaceContent?: (content: string) => void;
 }
 
-function ChatMessage({ role, content, reasoning, onInsertContent }: ChatMessageProps) {
+function ChatMessage({ role, content, reasoning, onInsertContent, onReplaceContent }: ChatMessageProps) {
     // Helper to render content with styled action badges
     const renderMessageContent = (msgContent: string) => {
         const parts = msgContent.split(/(__ACTION_EXECUTED:[a-z_]+__)/g);
@@ -27,6 +28,8 @@ function ChatMessage({ role, content, reasoning, onInsertContent }: ChatMessageP
             return <span key={idx} className="whitespace-pre-wrap">{part}</span>;
         });
     };
+
+    const cleanContent = content.replace(/__ACTION_EXECUTED:[a-z_]+__/g, '');
 
     return (
         <div className={`flex gap-3 ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -51,15 +54,27 @@ function ChatMessage({ role, content, reasoning, onInsertContent }: ChatMessageP
                     {role === 'assistant' && (
                         <div className="mt-3 flex gap-2 w-full">
                             <button
-                                onClick={() => onInsertContent(content.replace(/__ACTION_EXECUTED:[a-z_]+__/g, ''))}
-                                className="flex-1 bg-black text-white dark:bg-white dark:text-black py-1.5 rounded-md text-xs font-bold hover:opacity-80 transition flex items-center justify-center gap-2"
+                                onClick={() => onInsertContent(cleanContent)}
+                                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition flex items-center justify-center gap-1.5"
+                                title="Insert at cursor position"
                             >
-                                <FileText size={14} /> Add to Page
+                                <FileText size={14} />
+                                Insert
                             </button>
+                            {onReplaceContent && (
+                                <button
+                                    onClick={() => onReplaceContent(cleanContent)}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition flex items-center justify-center gap-1.5"
+                                    title="Replace selected text"
+                                >
+                                    <FileText size={14} />
+                                    Replace
+                                </button>
+                            )}
                             <button
-                                onClick={() => navigator.clipboard.writeText(content.replace(/__ACTION_EXECUTED:[a-z_]+__/g, ''))}
-                                className="px-2 bg-gray-100 dark:bg-gray-700/50 rounded-md text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-                                title="Copy text only"
+                                onClick={() => navigator.clipboard.writeText(cleanContent)}
+                                className="px-3 bg-gray-100 dark:bg-gray-700/50 rounded-md text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                                title="Copy to clipboard"
                             >
                                 <Copy size={14} />
                             </button>
