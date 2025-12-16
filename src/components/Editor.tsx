@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { memo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Table } from '@tiptap/extension-table';
@@ -219,4 +219,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>(({ content, onChange, onSel
 
 Editor.displayName = "Editor";
 
-export default Editor;
+// Export with memo to prevent unnecessary re-renders
+export default memo(Editor, (prevProps, nextProps) => {
+    // Only re-render if content changed
+    return prevProps.content === nextProps.content;
+});
