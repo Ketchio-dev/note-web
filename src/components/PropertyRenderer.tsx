@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Page } from '@/lib/workspace';
 import { evaluateFormula, formatFormulaResult } from '@/lib/formula-engine';
 import { format, parseISO } from 'date-fns';
-import { Check, X, ExternalLink, Mail, Phone, FileText, Calendar as CalendarIcon } from 'lucide-react';
+import { FileText, Link as LinkIcon, Mail, Phone, User, File, Calculator, Check, X, ExternalLink, Calendar as CalendarIcon } from 'lucide-react';
+import { RelationRenderer } from './RelationRenderer';
+import { calculateRollup, formatRollupResult } from '@/lib/rollup-calculator';
 
 type PropertyType = NonNullable<Page['properties']>[number];
 
@@ -285,20 +287,32 @@ export default function PropertyRenderer({
         );
     }
 
-    // Relation (simplified - show linked page IDs)
+    // Relation (show linked pages with real-time loading)
     if (property.type === 'relation') {
-        const linkedIds = Array.isArray(value) ? value : [];
+        if (readOnly) {
+            // Read-only view: just show page IDs
+            const linkedIds = Array.isArray(value) ? value : [];
+            return (
+                <div className="flex flex-wrap gap-1 px-3 py-1">
+                    {linkedIds.map((id: string) => (
+                        <span key={id} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs">
+                            {id.slice(0, 8)}...
+                        </span>
+                    ))}
+                    {linkedIds.length === 0 && (
+                        <span className="text-gray-400 text-xs">No relations</span>
+                    )}
+                </div>
+            );
+        }
+
+        // Editable view: use RelationRenderer
         return (
-            <div className="flex flex-wrap gap-1 px-3 py-1">
-                {linkedIds.map((id: string) => (
-                    <span key={id} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs">
-                        {id.slice(0, 8)}...
-                    </span>
-                ))}
-                {linkedIds.length === 0 && (
-                    <span className="text-gray-400 text-xs">No relations</span>
-                )}
-            </div>
+            <RelationRenderer
+                property={property}
+                value={Array.isArray(value) ? value : []}
+                onChange={onChange}
+            />
         );
     }
 
