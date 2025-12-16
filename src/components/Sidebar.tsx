@@ -12,7 +12,9 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import SettingsModal from "./SettingsModal";
 import SearchModal from "./SearchModal";
 import TemplatePicker from "./TemplatePicker";
-import { Template, renderTemplate } from "@/lib/templates";
+import TemplateGallery from "./database/TemplateGallery";
+import { Template, TEMPLATES, renderTemplate } from "@/lib/templates";
+import { DatabaseTemplate, DATABASE_TEMPLATES, createDatabaseFromTemplate } from "@/lib/database-templates";
 import { toast } from "sonner";
 
 // DnD Kit
@@ -123,6 +125,8 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
+    const [isDatabaseTemplatePickerOpen, setIsDatabaseTemplatePickerOpen] = useState(false);
+    const [pendingSection, setPendingSection] = useState<'private' | 'workspace'>('workspace');
     const [isTrashOpen, setIsTrashOpen] = useState(false);
     const [selectedTrash, setSelectedTrash] = useState<Set<string>>(new Set());
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -336,6 +340,29 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
         setIsTemplatePickerOpen(false);
     };
 
+    const handleDatabaseTemplateSelect = async (template: DatabaseTemplate) => {
+        const { properties } = createDatabaseFromTemplate(template);
+        const newPage = await createPage(
+            workspaceId,
+            null,
+            template.name,
+            'database',
+            pendingSection,
+            user?.uid
+        );
+        // Update with template properties
+        await updatePage(newPage.id, { properties, icon: template.icon });
+
+        // Show success toast
+        toast.success(`${template.icon} ${template.name} created!`, {
+            description: 'Database ready to use',
+            duration: 2000
+        });
+
+        router.push(`/workspace/${workspaceId}/${newPage.id}`);
+        setIsDatabaseTemplatePickerOpen(false);
+    };
+
     const handleRestore = async (pageId: string) => {
         await updatePage(pageId, { inTrash: false, trashDate: null });
         if (selectedTrash.has(pageId)) {
@@ -478,6 +505,12 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
                     className="flex items-center gap-3 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2C2C2C] rounded-md transition"
                 >
                     <FileText size={16} className="text-blue-500" /> <span className="font-medium text-gray-900 dark:text-gray-200">New from Template</span>
+                </button>
+                <button
+                    onClick={() => { setPendingSection('workspace'); setIsDatabaseTemplatePickerOpen(true); }}
+                    className="flex items-center gap-3 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2C2C2C] rounded-md transition"
+                >
+                    <Layout size={16} className="text-purple-500" /> <span className="font-medium text-gray-900 dark:text-gray-200">New Database</span>
                 </button>
             </div>
 
@@ -682,6 +715,11 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
                 isOpen={isTemplatePickerOpen}
                 onSelect={handleTemplateSelect}
                 onClose={() => setIsTemplatePickerOpen(false)}
+            />
+            <TemplateGallery
+                isOpen={isDatabaseTemplatePickerOpen}
+                onSelect={handleDatabaseTemplateSelect}
+                onClose={() => setIsDatabaseTemplatePickerOpen(false)}
             />
         </div>
     );

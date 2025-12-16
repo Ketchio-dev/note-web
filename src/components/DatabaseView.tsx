@@ -16,6 +16,7 @@ import DatabaseControls from "./DatabaseControls";
 import { FilterGroup, applyFilters } from "@/lib/filter-engine";
 import { Sort, applySorts } from "@/lib/sort-engine";
 import PropertyMenu from "./database/PropertyMenu";
+import AddColumnModal from "./database/AddColumnModal";
 
 interface DatabaseViewProps {
     workspaceId: string;
@@ -43,6 +44,7 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
 
     // Property Menu state
     const [activePropertyMenu, setActivePropertyMenu] = useState<string | null>(null);
+    const [showAddColumnModal, setShowAddColumnModal] = useState(false);
 
     // Auto-create Select property for Board view if none exists
     useEffect(() => {
@@ -107,12 +109,7 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
         });
     };
 
-    const addColumn = async () => {
-        const name = prompt("Column name?");
-        if (!name) return;
-
-        const type = prompt("Property type?\n\nOptions: text, number, select, multi-select, date, checkbox, url, email, phone, formula, person, files, relation, rollup, progress") || 'text';
-
+    const addColumn = async (name: string, type: string) => {
         const newCol: any = {
             id: crypto.randomUUID(),
             name,
@@ -135,6 +132,7 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
         onUpdateParent({
             properties: [...columns, newCol]
         });
+        setShowAddColumnModal(false);
     };
 
     const updateCellValue = async (pageId: string, propertyId: string, value: any) => {
@@ -303,7 +301,7 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
 
                             {/* Add Column Button */}
                             <th className="w-[50px] text-left py-2 px-1 border-r border-transparent">
-                                <button onClick={addColumn} className="p-1 hover:bg-gray-100 dark:hover:bg-[#2C2C2C] rounded transition">
+                                <button onClick={() => setShowAddColumnModal(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-[#2C2C2C] rounded transition">
                                     <Plus size={16} className="text-gray-400" />
                                 </button>
                             </th>
@@ -389,6 +387,14 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
                     parentPage={parentPage}
                     childPages={childPages}
                     onUpdateParent={onUpdateParent}
+                />
+            )}
+
+            {/* Add Column Modal */}
+            {showAddColumnModal && (
+                <AddColumnModal
+                    onAdd={addColumn}
+                    onClose={() => setShowAddColumnModal(false)}
                 />
             )}
         </div>

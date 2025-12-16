@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Type, Hash, Calendar, CheckSquare, Link as LinkIcon, Mail, Phone, Folder, Calculator, GitBranch, Sigma, Users, FileText, MoreHorizontal, Trash2, Copy, ChevronLeft, ChevronRight } from 'lucide-react';
+import SelectOptionsEditor from './SelectOptionsEditor';
 
 interface PropertyMenuProps {
     property: any;
@@ -33,6 +34,7 @@ export default function PropertyMenu({ property, onUpdate, onDelete, onDuplicate
     const [isEditingName, setIsEditingName] = useState(false);
     const [propertyName, setPropertyName] = useState(property.name);
     const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+    const [showOptionsEditor, setShowOptionsEditor] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -66,6 +68,11 @@ export default function PropertyMenu({ property, onUpdate, onDelete, onDuplicate
     const handleTypeChange = (newType: string) => {
         onUpdate({ type: newType });
         setShowTypeDropdown(false);
+    };
+
+    const handleUpdateOptions = (newOptions: any[]) => {
+        onUpdate({ options: newOptions });
+        setShowOptionsEditor(false);
     };
 
     const currentType = PROPERTY_TYPES.find(t => t.type === property.type);
@@ -142,7 +149,10 @@ export default function PropertyMenu({ property, onUpdate, onDelete, onDuplicate
             {/* Actions */}
             <div className="py-1">
                 {(property.type === 'select' || property.type === 'multi-select') && (
-                    <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2C2C2C]">
+                    <button
+                        onClick={() => setShowOptionsEditor(true)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2C2C2C]"
+                    >
                         <MoreHorizontal size={14} />
                         Edit options
                     </button>
@@ -183,6 +193,15 @@ export default function PropertyMenu({ property, onUpdate, onDelete, onDuplicate
                     Delete property
                 </button>
             </div>
+
+            {/* Select Options Editor Modal */}
+            {showOptionsEditor && (
+                <SelectOptionsEditor
+                    options={property.options || []}
+                    onUpdate={handleUpdateOptions}
+                    onClose={() => setShowOptionsEditor(false)}
+                />
+            )}
         </div>
     );
 }
