@@ -87,15 +87,16 @@ export function ShareDialog({ pageId, isOpen, onClose }: ShareDialogProps) {
             const data = await res.json();
 
             if (res.ok) {
-                toast.success('Invitation sent!');
+                toast.success(data.message || 'Invitation sent!');
                 setEmail('');
+                setRole('viewer');
                 loadPermissions(); // Refresh
             } else {
                 toast.error(data.error || 'Failed to send invitation');
             }
         } catch (e: any) {
+            console.error('Invite error:', e);
             toast.error('Failed to send invitation');
-            console.error(e);
         } finally {
             setLoading(false);
         }
