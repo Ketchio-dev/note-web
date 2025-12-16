@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import SettingsModal from "./SettingsModal";
 import SearchModal from "./SearchModal";
 import TemplatePicker from "./TemplatePicker";
@@ -145,10 +145,42 @@ export default function Sidebar({ workspaceId }: { workspaceId: string }) {
         };
     }, []);
 
+    // Fetch pages for the current workspace
     useEffect(() => {
-        const unsubscribe = subscribeToWorkspacePages(workspaceId, (fetchedPages) => {
+        if (!workspaceId) return;
+
+        // Only subscribe when document is visible (optimization)
+        if (typeof document !== 'undefined' && document.hidden) {
+            // If not visible, just fetch once without subscription
+            const fetchPages = async () => {
+                const q = query(
+                    collection(db, "pages"),
+                    where("workspaceId", "==", workspaceId)
+                );
+                const snapshot = await getDocs(q);
+                const fetchedPages: Page[] = [];
+                snapshot.forEach(doc => {
+                    fetchedPages.push({ id: doc.id, ...doc.data() } as Page);
+                });
+                setPages(sortPages(fetchedPages));
+            };
+            fetchPages();
+            return;
+        }
+
+        const q = query(
+            collection(db, "pages"),
+            where("workspaceId", "==", workspaceId)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedPages: Page[] = [];
+            snapshot.forEach(doc => {
+                fetchedPages.push({ id: doc.id, ...doc.data() } as Page);
+            });
             setPages(sortPages(fetchedPages));
         });
+
         return () => unsubscribe();
     }, [workspaceId, sortPages]);
 

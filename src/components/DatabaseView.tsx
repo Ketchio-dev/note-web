@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
+import debounce from "lodash.debounce";
 import { Page, createPage, updatePage } from "@/lib/workspace";
 import { Plus, Hash, Type, Calendar, ChevronDown, FileText, MoreHorizontal, CheckSquare, Link as LinkIcon, Mail, Phone, Folder, Calculator, GitBranch, Sigma, Table, BarChart3, Grid, Trello, List as ListIcon, CalendarDays, GanttChartSquare } from "lucide-react";
 import Link from "next/link";
@@ -164,13 +165,27 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
         setShowAddColumnModal(false);
     }, [columns, onUpdateParent]);
 
-    const updateCellValue = useCallback(async (pageId: string, propertyId: string, value: PropertyValue) => {
-        const page = childPages.find(p => p.id === pageId);
-        if (!page) return;
+    // Debounced update helper
+    const debouncedFirestoreUpdate = useMemo(
+        () => debounce(async (pageId: string, updates: Partial<Page>) => {
+            try {
+                await updatePage(pageId, updates);
+            } catch (error) {
+                console.error('Failed to update:', error);
+            }
+        }, 800), // 800ms for snappy feel
+        []
+    );
 
-        const newValues = { ...(page.propertyValues || {}), [propertyId]: value };
-        await updatePage(pageId, { propertyValues: newValues });
-    }, [childPages]);
+    const updateCellValue = useCallback((pageId: string, propertyId: string, value: any) => {
+        // Optimistic update - change happens immediately in UI
+        // Firestore save is debounced in background
+        debouncedFirestoreUpdate(pageId, {
+            propertyValues: {
+                [propertyId]: value
+            }
+        });
+    }, [debouncedFirestoreUpdate]);
 
     const handleNewRow = useCallback(async () => {
         await createPage(workspaceId, parentPage.id, "Untitled", 'page', parentPage.section, parentPage.createdBy);

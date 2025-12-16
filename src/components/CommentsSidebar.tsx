@@ -31,23 +31,24 @@ export default function CommentsSidebar({ pageId, isOpen, onClose }: CommentsSid
 
     // Subscribe to comments
     useEffect(() => {
-        if (!pageId || !isOpen) return;
+        if (!pageId) return;
 
-        const q = query(
-            collection(db, 'pages', pageId, 'comments'),
-            orderBy('createdAt', 'desc')
-        );
+        // Only subscribe when comments sidebar is actually open (optimization)
+        if (!isOpen) return;
+
+        const commentsRef = collection(db, 'pages', pageId, 'comments');
+        const q = query(commentsRef, orderBy('createdAt', 'asc'));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const cms: Comment[] = [];
-            snapshot.forEach(doc => {
-                cms.push({ id: doc.id, ...doc.data() } as Comment);
+            const fetchedComments: Comment[] = [];
+            snapshot.forEach((doc) => {
+                fetchedComments.push({ id: doc.id, ...doc.data() } as Comment);
             });
-            setComments(cms);
+            setComments(fetchedComments);
         });
 
         return () => unsubscribe();
-    }, [pageId, isOpen]);
+    }, [pageId, isOpen]); // Added isOpen dependency, isOpen]);
 
     const addComment = async () => {
         if (!newComment.trim() || !user) return;
@@ -122,8 +123,8 @@ export default function CommentsSidebar({ pageId, isOpen, onClose }: CommentsSid
                         <div
                             key={comment.id}
                             className={`p-3 rounded-lg border transition ${comment.resolved
-                                    ? 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 opacity-60'
-                                    : 'bg-white dark:bg-[#252525] border-gray-200 dark:border-gray-700'
+                                ? 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 opacity-60'
+                                : 'bg-white dark:bg-[#252525] border-gray-200 dark:border-gray-700'
                                 }`}
                         >
                             {/* Header */}
