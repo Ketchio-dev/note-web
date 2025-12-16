@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, getDoc } from "firebase/firestore";
 import { Check, X, Mail, Clock, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
