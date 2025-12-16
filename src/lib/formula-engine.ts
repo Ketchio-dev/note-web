@@ -143,15 +143,21 @@ function createFormulaContext(properties: PropertyMap) {
 }
 
 /**
- * Safely evaluate an expression with given context
+ * Safely evaluate an expression with given context using mathjs
  */
 function evaluateExpression(expression: string, context: any): PropertyValue {
   try {
-    const keys = Object.keys(context);
-    const values = Object.values(context);
-    const func = new Function(...keys, `return ${expression}`);
-    return func(...values);
+    // Use mathjs for safe evaluation instead of Function constructor
+    const scope = {
+      ...context,
+      // Ensure all context values are available in scope
+    };
+
+    // mathjs.evaluate is safe and doesn't use eval()
+    const result = math.evaluate(expression, scope);
+    return result;
   } catch (error) {
+    console.error('Formula evaluation error:', error);
     return null;
   }
 }

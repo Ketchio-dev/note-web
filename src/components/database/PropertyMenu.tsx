@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, Type, Hash, Calendar, CheckSquare, Link as LinkIcon, Mail, Phone, Folder, Calculator, GitBranch, Sigma, Users, FileText, MoreHorizontal, Trash2, Copy, ChevronLeft, ChevronRight } from 'lucide-react';
 import SelectOptionsEditor from './SelectOptionsEditor';
 
@@ -39,16 +39,16 @@ export default function PropertyMenu({ property, onUpdate, onDelete, onDuplicate
     const nameInputRef = useRef<HTMLInputElement>(null);
 
     // Close menu when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                onClose();
-            }
-        };
+    const handleClickOutside = useCallback((event: MouseEvent) => {
+        if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+            onClose();
+        }
+    }, [onClose]);
 
+    useEffect(() => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [onClose]);
+    }, [handleClickOutside]);
 
     // Focus input when editing
     useEffect(() => {

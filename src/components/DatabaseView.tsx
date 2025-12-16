@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Page, createPage, updatePage } from "@/lib/workspace";
 import { Plus, Hash, Type, Calendar, ChevronDown, FileText, MoreHorizontal, CheckSquare, Link as LinkIcon, Mail, Phone, Folder, Calculator, GitBranch, Sigma, Table, BarChart3, Grid, Trello, List as ListIcon, CalendarDays, GanttChartSquare } from "lucide-react";
 import Link from "next/link";
@@ -69,10 +69,13 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
                 });
             }
         }
-    }, [currentView, columns.length]); // Only run when view changes or columns added
+    }, [currentView, columns]); // Fix: use columns instead of columns.length
 
-    // Apply filters and sorts
-    const filteredAndSortedPages = applySorts(applyFilters(childPages, filterGroup), sorts);
+    // Memoize expensive calculations
+    const filteredAndSortedPages = useMemo(
+        () => applySorts(applyFilters(childPages, filterGroup), sorts),
+        [childPages, filterGroup, sorts]
+    );
 
     // Save current view
     const saveCurrentView = async () => {
@@ -135,36 +138,36 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
         setShowAddColumnModal(false);
     };
 
-    const updateCellValue = async (pageId: string, propertyId: string, value: any) => {
+    const updateCellValue = useCallback(async (pageId: string, propertyId: string, value: any) => {
         const page = childPages.find(p => p.id === pageId);
         if (!page) return;
 
         const newValues = { ...(page.propertyValues || {}), [propertyId]: value };
         await updatePage(pageId, { propertyValues: newValues });
-    };
+    }, [childPages]);
 
-    const handleNewRow = async () => {
+    const handleNewRow = useCallback(async () => {
         await createPage(workspaceId, parentPage.id, "Untitled", 'page', parentPage.section, parentPage.createdBy);
-    };
+    }, [workspaceId, parentPage.id, parentPage.section, parentPage.createdBy]);
 
     // Property Management Functions
-    const updateProperty = async (propId: string, updates: Partial<any>) => {
+    const updateProperty = useCallback(async (propId: string, updates: Partial<any>) => {
         const updatedColumns = columns.map(col =>
             col.id === propId ? { ...col, ...updates } : col
         );
         await onUpdateParent({ properties: updatedColumns });
         setActivePropertyMenu(null);
-    };
+    }, [columns, onUpdateParent]);
 
-    const deleteProperty = async (propId: string) => {
+    const deleteProperty = useCallback(async (propId: string) => {
         if (confirm('Delete this property? All data in this column will be lost.')) {
             const updatedColumns = columns.filter(col => col.id !== propId);
             await onUpdateParent({ properties: updatedColumns });
             setActivePropertyMenu(null);
         }
-    };
+    }, [columns, onUpdateParent]);
 
-    const duplicateProperty = async (propId: string) => {
+    const duplicateProperty = useCallback(async (propId: string) => {
         const prop = columns.find(c => c.id === propId);
         if (prop) {
             const newProp = {
@@ -175,7 +178,7 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
             await onUpdateParent({ properties: [...columns, newProp] });
             setActivePropertyMenu(null);
         }
-    };
+    }, [columns, onUpdateParent]);
 
     const moveProperty = async (propId: string, direction: 'left' | 'right') => {
         const index = columns.findIndex(c => c.id === propId);
