@@ -24,16 +24,29 @@ export type PropertyMap = Record<string, PropertyValue>;
  * Main formula evaluation function
  * @param formula - Formula string (e.g., "prop('Price') * 1.1")
  * @param properties - Map of property names to values
- * @returns Calculated result
+ * @returns Calculated result or null on error
  */
 export function evaluateFormula(formula: string, properties: PropertyMap): PropertyValue {
-  if (!formula.trim()) return null;
+  if (!formula || typeof formula !== 'string') {
+    console.error('Formula evaluation error: Invalid formula input');
+    return null;
+  }
+
+  const trimmedFormula = formula.trim();
+  if (!trimmedFormula) {
+    return null;
+  }
 
   try {
     const context = createFormulaContext(properties);
-    const result = evaluateExpression(formula, context);
+    const result = evaluateExpression(trimmedFormula, context);
     return result;
   } catch (error) {
+    console.error('Formula evaluation error:', {
+      formula: trimmedFormula,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      properties: Object.keys(properties)
+    });
     return null;
   }
 }
@@ -147,6 +160,11 @@ function createFormulaContext(properties: PropertyMap) {
  */
 function evaluateExpression(expression: string, context: any): PropertyValue {
   try {
+    // Input validation
+    if (!expression || typeof expression !== 'string') {
+      throw new Error('Invalid expression: must be a non-empty string');
+    }
+
     // Use mathjs for safe evaluation instead of Function constructor
     const scope = {
       ...context,
@@ -155,9 +173,25 @@ function evaluateExpression(expression: string, context: any): PropertyValue {
 
     // mathjs.evaluate is safe and doesn't use eval()
     const result = math.evaluate(expression, scope);
+
+    // Validate result
+    if (result === Infinity || result === -Infinity) {
+      console.warn('Formula resulted in Infinity');
+      return null;
+    }
+    if (typeof result === 'number' && isNaN(result)) {
+      console.warn('Formula resulted in NaN');
+      return null;
+    }
+
     return result;
   } catch (error) {
-    console.error('Formula evaluation error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Formula evaluation error:', {
+      expression,
+      error: errorMessage,
+      availableFunctions: Object.keys(context).slice(0, 10) // Show first 10 for debugging
+    });
     return null;
   }
 }

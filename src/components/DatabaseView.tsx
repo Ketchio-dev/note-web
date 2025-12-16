@@ -112,31 +112,30 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
         });
     };
 
-    const addColumn = async (name: string, type: string) => {
-        const newCol: any = {
+    // Add Property type for better typing
+    type Property = NonNullable<Page['properties']>[number];
+
+    const addColumn = useCallback((name: string, type: Property['type']) => {
+        // Validation
+        if (!name || !name.trim()) {
+            console.error('Cannot create column with empty name');
+            return;
+        }
+
+        const newColumn: Property = {
             id: crypto.randomUUID(),
-            name,
-            type: type as any
+            name: name.trim(),
+            type,
+            ...(type === 'select' || type === 'multi-select' ? {
+                options: [
+                    { id: crypto.randomUUID(), name: 'Option 1', color: 'gray' },
+                ]
+            } : {})
         };
 
-        // For select/multi-select, add default options
-        if (type === 'select' || type === 'multi-select') {
-            newCol.options = [
-                { id: crypto.randomUUID(), name: 'Option 1', color: 'blue' },
-                { id: crypto.randomUUID(), name: 'Option 2', color: 'green' },
-            ];
-        }
-
-        // For formula, add a default formula
-        if (type === 'formula') {
-            newCol.formula = 'prop("PropertyName")';
-        }
-
-        onUpdateParent({
-            properties: [...columns, newCol]
-        });
+        onUpdateParent({ properties: [...columns, newColumn] });
         setShowAddColumnModal(false);
-    };
+    }, [columns, onUpdateParent]);
 
     const updateCellValue = useCallback(async (pageId: string, propertyId: string, value: any) => {
         const page = childPages.find(p => p.id === pageId);

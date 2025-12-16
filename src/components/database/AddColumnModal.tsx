@@ -2,9 +2,12 @@
 
 import { useState } from 'react';
 import { X, Type, Hash, Calendar, CheckSquare, Link as LinkIcon, Mail, Phone, Folder, Calculator, GitBranch, Sigma, Users } from 'lucide-react';
+import { Page } from '@/lib/workspace';
+
+type PropertyType = NonNullable<Page['properties']>[number]['type'];
 
 interface AddColumnModalProps {
-    onAdd: (name: string, type: string) => void;
+    onAdd: (name: string, type: PropertyType) => void;
     onClose: () => void;
 }
 
@@ -31,7 +34,7 @@ export default function AddColumnModal({ onAdd, onClose }: AddColumnModalProps) 
 
     const handleCreate = () => {
         if (name.trim()) {
-            onAdd(name.trim(), selectedType);
+            onAdd(name.trim(), selectedType as PropertyType);
             onClose();
         }
     };
@@ -81,8 +84,8 @@ export default function AddColumnModal({ onAdd, onClose }: AddColumnModalProps) 
                                         key={type.type}
                                         onClick={() => setSelectedType(type.type)}
                                         className={`flex items-start gap-3 p-3 rounded-lg border-2 text-left transition ${selectedType === type.type
-                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                                : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                            : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
                                             }`}
                                     >
                                         <Icon size={18} className={selectedType === type.type ? 'text-blue-600' : 'text-gray-400'} />

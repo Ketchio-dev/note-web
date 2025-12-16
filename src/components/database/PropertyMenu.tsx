@@ -2,11 +2,15 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, Type, Hash, Calendar, CheckSquare, Link as LinkIcon, Mail, Phone, Folder, Calculator, GitBranch, Sigma, Users, FileText, MoreHorizontal, Trash2, Copy, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Page } from '@/lib/workspace';
 import SelectOptionsEditor from './SelectOptionsEditor';
 
+type Property = NonNullable<Page['properties']>[number];
+type SelectOption = NonNullable<Property['options']>[number];
+
 interface PropertyMenuProps {
-    property: any;
-    onUpdate: (updates: Partial<any>) => void;
+    property: Property;
+    onUpdate: (updates: Partial<Property>) => void;
     onDelete: () => void;
     onDuplicate: () => void;
     onMove?: (direction: 'left' | 'right') => void;
@@ -66,11 +70,11 @@ export default function PropertyMenu({ property, onUpdate, onDelete, onDuplicate
     };
 
     const handleTypeChange = (newType: string) => {
-        onUpdate({ type: newType });
+        onUpdate({ type: newType as Property['type'] });
         setShowTypeDropdown(false);
     };
 
-    const handleUpdateOptions = (newOptions: any[]) => {
+    const handleUpdateOptions = (newOptions: SelectOption[]) => {
         onUpdate({ options: newOptions });
         setShowOptionsEditor(false);
     };
