@@ -12,8 +12,9 @@ import PageMenu from "@/components/PageMenu";
 import CollaborationDrawer from "@/components/CollaborationDrawer"; // Import Drawer
 import SharePopover from "@/components/SharePopover"; // Import SharePopover
 import PresenceAvatars from "@/components/PresenceAvatars";
+import CommentsSidebar from "@/components/CommentsSidebar";
 import AITaskMenu, { AITask } from "@/components/ai/AITaskMenu";
-import { Sparkles, Share, MoreHorizontal, FileText, Table as TableIcon, Layout } from "lucide-react";
+import { Sparkles, Share, MoreHorizontal, FileText, Table as TableIcon, Layout, MessageSquare } from "lucide-react";
 import { serverTimestamp } from "firebase/firestore";
 
 export default function PageEditor() {
@@ -36,6 +37,7 @@ export default function PageEditor() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isUpdatesOpen, setIsUpdatesOpen] = useState(false); // Drawer State
     const [isShareOpen, setIsShareOpen] = useState(false); // Share Popover State
+    const [isCommentsOpen, setIsCommentsOpen] = useState(false); // Comments Sidebar State
 
     // AI Task Menu state
     const [selectedText, setSelectedText] = useState<string>("");
@@ -217,6 +219,14 @@ export default function PageEditor() {
 
                     {/* Right Actions */}
                     <div className="flex items-center gap-2 relative">
+                        <button
+                            onClick={() => setIsCommentsOpen(!isCommentsOpen)}
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex items-center gap-1"
+                        >
+                            <MessageSquare size={16} />
+                            <span className="text-sm font-medium">Comments</span>
+                        </button>
+                        <span className="text-gray-300">|</span>
                         <button onClick={() => setIsShareOpen(!isShareOpen)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                             <span className="text-sm font-medium mr-1">Share</span>
                         </button>
@@ -355,6 +365,13 @@ ${selectedText}`;
                 onClose={() => setIsUpdatesOpen(false)}
                 pageId={pageId}
                 pageTitle={page.title}
+            />
+
+            {/* Comments Sidebar */}
+            <CommentsSidebar
+                pageId={pageId}
+                isOpen={isCommentsOpen}
+                onClose={() => setIsCommentsOpen(false)}
             />
         </div>
     );
