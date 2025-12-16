@@ -77,60 +77,123 @@ export default function DatabaseCreationMenu({
     const handleCSVImport = async (file: File) => {
         try {
             const text = await file.text();
-            const lines = text.split('\n').filter(line => line.trim());
-
-            if (lines.length === 0) {
-                alert('CSV file is empty');
-                return;
-            }
-
-            // Parse CSV header
-            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-
-            // Parse rows
-            const rows = lines.slice(1, Math.min(lines.length, 11)).map(line => {
-                const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-                const row: any = {};
-                headers.forEach((header, index) => {
-                    row[header] = values[index] || '';
-                });
-                return row;
-            });
-
-            // Infer column types
-            const properties = headers.map((header, index) => {
-                const sampleValue = rows[0]?.[header];
-                let type: 'text' | 'number' | 'select' | 'date' | 'checkbox' = 'text';
-
-                if (!isNaN(Number(sampleValue))) {
-                    type = 'number';
-                } else if (sampleValue?.toLowerCase() === 'true' || sampleValue?.toLowerCase() === 'false') {
-                    type = 'checkbox';
-                } else if (/^\d{4}-\d{2}-\d{2}/.test(sampleValue)) {
-                    type = 'date';
-                }
-
-                return {
-                    id: `csv-col-${index}`,
-                    name: header,
-                    type,
-                };
-            });
-
-            const csvTemplate: DatabaseTemplate = {
-                id: 'csv-import',
-                name: file.name.replace('.csv', ''),
-                description: `Imported from ${file.name}`,
-                icon: '📊',
-                color: 'green',
-                properties,
-            };
-
-            onSelectTemplate(csvTemplate);
-            onClose();
+            await importCSVFromText(file.name, text);
         } catch (error) {
             console.error('CSV import failed:', error);
             alert('Failed to import CSV file');
+        }
+    };
+
+    /**
+     * Handle ZIP Import
+     */
+    const handleZIPImport = async (file: File) => {
+        try {
+            const JSZip = (await import('jszip')).default;
+            const zip = new JSZip();
+            const contents = await zip.loadAsync(file);
+
+            // Find all CSV files
+            const csvFiles: { name: string; content: string }[] = [];
+
+            for (const [filename, zipEntry] of Object.entries(contents.files)) {
+                if (filename.endsWith('.csv') && !zipEntry.dir) {
+                    const content = await zipEntry.async('text');
+                    csvFiles.push({ name: filename, content });
+                }
+            }
+
+            if (csvFiles.length === 0) {
+                alert('No CSV files found in ZIP');
+                return;
+            }
+
+            // If only one CSV, import it directly
+            if (csvFiles.length === 1) {
+                await importCSVFromText(csvFiles[0].name, csvFiles[0].content);
+                return;
+            }
+
+            // Multiple CSVs - let user choose
+            const choice = prompt(
+                `Found ${csvFiles.length} CSV files:\n${csvFiles.map((f, i) => `${i + 1}. ${f.name}`).join('\n')}\n\nEnter number to import (or 0 to import all):`
+            );
+
+            if (!choice) return;
+
+            const choiceNum = parseInt(choice);
+            if (choiceNum === 0) {
+                // Import all (create multiple databases)
+                for (const csvFile of csvFiles) {
+                    await importCSVFromText(csvFile.name, csvFile.content);
+                }
+                alert(`Imported ${csvFiles.length} databases`);
+            } else if (choiceNum > 0 && choiceNum <= csvFiles.length) {
+                await importCSVFromText(csvFiles[choiceNum - 1].name, csvFiles[choiceNum - 1].content);
+            }
+        } catch (error) {
+            console.error('ZIP import failed:', error);
+            alert('Failed to import ZIP file');
+        }
+    };
+
+    /**
+     * Import CSV from text content
+     */
+    const importCSVFromText = async (filename: string, text: string) => {
+        const lines = text.split('\n').filter(line => line.trim());
+
+        if (lines.length === 0) {
+            alert(`${filename} is empty`);
+            return;
+        }
+
+        // Parse CSV header
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+
+        // Infer column types
+        const properties = headers.map((header, index) => {
+            const sampleValue = lines[1]?.split(',')[index]?.trim().replace(/"/g, '');
+            let type: 'text' | 'number' | 'select' | 'date' | 'checkbox' = 'text';
+
+            if (!isNaN(Number(sampleValue))) {
+                type = 'number';
+            } else if (sampleValue?.toLowerCase() === 'true' || sampleValue?.toLowerCase() === 'false') {
+                type = 'checkbox';
+            } else if (/^\d{4}-\d{2}-\d{2}/.test(sampleValue)) {
+                type = 'date';
+            }
+
+            return {
+                id: `csv-col-${index}`,
+                name: header,
+                type,
+            };
+        });
+
+        const csvTemplate: DatabaseTemplate = {
+            id: 'csv-import',
+            name: filename.replace('.csv', ''),
+            description: `Imported from ${filename}`,
+            icon: '📊',
+            color: 'green',
+            properties,
+        };
+
+        onSelectTemplate(csvTemplate);
+        onClose();
+    };
+
+    /**
+     * Handle file selection
+     */
+    const handleFileSelect = async (file: File) => {
+        if (file.name.endsWith('.csv')) {
+            await handleCSVImport(file);
+        } else if (file.name.endsWith('.zip')) {
+            await handleZIPImport(file);
+        } else {
+            alert('Please select a CSV or ZIP file');
         }
     };
 
@@ -287,16 +350,16 @@ export default function DatabaseCreationMenu({
                             <div className="w-5 h-5 flex items-center justify-center">
                                 <FileUp size={16} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200" />
                             </div>
-                            <span className="flex-1 text-left">Import CSV</span>
+                            <span className="flex-1 text-left">Import CSV / ZIP</span>
                         </button>
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept=".csv"
+                            accept=".csv,.zip"
                             className="hidden"
                             onChange={(e) => {
                                 const file = e.target.files?.[0];
-                                if (file) handleCSVImport(file);
+                                if (file) handleFileSelect(file);
                             }}
                         />
                     </div>
