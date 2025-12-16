@@ -21,27 +21,16 @@ export async function POST(
         }
 
         const { id } = await context.params;
-
-        // Get user from session
-        const cookieStore = await cookies();
-        const sessionCookie = cookieStore.get('session');
-
-        if (!sessionCookie) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Please log in' },
-                { status: 401 }
-            );
-        }
-
-        // Get authenticated user ID from session
-        const userId = sessionCookie.value;
+        const body = await req.json();
+        const { userId } = body;
 
         if (!userId) {
             return NextResponse.json(
-                { error: 'Invalid session' },
+                { error: 'Unauthorized - User ID required' },
                 { status: 401 }
             );
         }
+
 
         // Get invitation
         const invitationRef = doc(db, 'invitations', id);

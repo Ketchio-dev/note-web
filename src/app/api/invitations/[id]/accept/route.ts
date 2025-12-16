@@ -22,35 +22,16 @@ export async function POST(
         }
 
         const { id } = await context.params;
-
-        // Get user from session/cookie
-        const cookieStore = await cookies();
-        const sessionCookie = cookieStore.get('session');
-
-        if (!sessionCookie) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Please log in' },
-                { status: 401 }
-            );
-        }
-
-        // Get authenticated user
-        // In a real implementation, you would verify Firebase Auth token here
-        // For now, we'll use a simplified approach:
-        // The userId should come from the authenticated Firebase user
-        // Since we're using Firebase Auth client-side, we need to trust the client
-        // or implement Firebase Admin SDK for server-side verification
-
-        // Simplified: Extract userId from auth header or session
-        // This assumes the client sends the userId in the session cookie
-        const userId = sessionCookie.value;
+        const body = await req.json();
+        const { userId } = body;
 
         if (!userId) {
             return NextResponse.json(
-                { error: 'Invalid session' },
+                { error: 'Unauthorized - User ID required' },
                 { status: 401 }
             );
         }
+
 
         // Use transaction for atomicity
         const result = await runTransaction(db, async (transaction) => {

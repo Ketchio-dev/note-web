@@ -104,8 +104,18 @@ export default function InvitationsPage({ params }: { params: Promise<{ workspac
         setProcessingIds(prev => new Set(prev).add(invitationId));
 
         try {
+            // Get Firebase Auth user ID
+            if (!user?.uid) {
+                toast.error("Please log in to accept invitations");
+                return;
+            }
+
             const res = await fetch(`/api/invitations/${invitationId}/accept`, {
                 method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: user.uid }),
             });
 
             const data = await res.json();
@@ -147,8 +157,18 @@ export default function InvitationsPage({ params }: { params: Promise<{ workspac
         setProcessingIds(prev => new Set(prev).add(invitationId));
 
         try {
+            // Get Firebase Auth user ID
+            if (!user?.uid) {
+                toast.error("Please log in to reject invitations");
+                return;
+            }
+
             const res = await fetch(`/api/invitations/${invitationId}/reject`, {
                 method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: user.uid }),
             });
 
             const data = await res.json();
