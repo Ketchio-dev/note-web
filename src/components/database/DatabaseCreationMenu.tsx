@@ -93,18 +93,30 @@ export default function DatabaseCreationMenu({
             const zip = new JSZip();
             const contents = await zip.loadAsync(file);
 
-            // Find all CSV files
+            // Find all CSV files (case insensitive)
             const csvFiles: { name: string; content: string }[] = [];
 
+            console.log('ZIP contents:', Object.keys(contents.files));
+
             for (const [filename, zipEntry] of Object.entries(contents.files)) {
-                if (filename.endsWith('.csv') && !zipEntry.dir) {
-                    const content = await zipEntry.async('text');
-                    csvFiles.push({ name: filename, content });
+                console.log('Checking file:', filename, 'isDir:', zipEntry.dir);
+
+                // Check if file ends with .csv (case insensitive) and is not a directory
+                if (filename.toLowerCase().endsWith('.csv') && !zipEntry.dir) {
+                    try {
+                        const content = await zipEntry.async('text');
+                        csvFiles.push({ name: filename, content });
+                        console.log('Added CSV:', filename);
+                    } catch (err) {
+                        console.error('Failed to read file:', filename, err);
+                    }
                 }
             }
 
+            console.log('Found CSV files:', csvFiles.length);
+
             if (csvFiles.length === 0) {
-                alert('No CSV files found in ZIP');
+                alert(`No CSV files found in ZIP.\n\nFiles in ZIP:\n${Object.keys(contents.files).join('\n')}`);
                 return;
             }
 
@@ -133,7 +145,7 @@ export default function DatabaseCreationMenu({
             }
         } catch (error) {
             console.error('ZIP import failed:', error);
-            alert('Failed to import ZIP file');
+            alert(`Failed to import ZIP file: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
 
