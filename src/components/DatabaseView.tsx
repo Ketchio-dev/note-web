@@ -319,7 +319,7 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
                         </button>
 
                         {showNewRowMenu && (
-                            <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden z-10">
+                            <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden z-50">
                                 <button
                                     onClick={() => handleNewRow('page')}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
