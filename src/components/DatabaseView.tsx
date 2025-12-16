@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import debounce from "lodash.debounce";
 import { Page, createPage, updatePage } from "@/lib/workspace";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { Plus, Hash, Type, Calendar, ChevronDown, FileText, MoreHorizontal, CheckSquare, Link as LinkIcon, Mail, Phone, Folder, Calculator, GitBranch, Sigma, Table, BarChart3, Grid, Trello, List as ListIcon, CalendarDays, GanttChartSquare } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -74,12 +76,16 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
     const [activePropertyMenu, setActivePropertyMenu] = useState<string | null>(null);
     const [showAddColumnModal, setShowAddColumnModal] = useState(false);
 
+    // Ref to prevent infinite re-render when auto-creating Status property
+    const hasCreatedStatusRef = useRef(false);
+
     // Auto-create Select property for Board view if none exists
     useEffect(() => {
-        if (currentView === 'board') {
+        if (currentView === 'board' && !hasCreatedStatusRef.current) {
             const hasSelectProperty = columns.some(col => col.type === 'select');
 
             if (!hasSelectProperty && columns.length >= 0) {
+                hasCreatedStatusRef.current = true;
                 // Auto-create Status property for Board view
                 const statusProperty = {
                     id: crypto.randomUUID(),
@@ -96,8 +102,11 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
                     properties: [...columns, statusProperty]
                 });
             }
+        } else if (currentView !== 'board') {
+            // Reset ref when leaving board view
+            hasCreatedStatusRef.current = false;
         }
-    }, [currentView, columns]); // Fix: use columns instead of columns.length
+    }, [currentView, columns, onUpdateParent]);
 
     // Memoize expensive calculations
     const filteredAndSortedPages = useMemo(
@@ -165,11 +174,16 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
         setShowAddColumnModal(false);
     }, [columns, onUpdateParent]);
 
-    // Debounced update helper
+    // Debounced update helper - uses Firestore dot notation to preserve other property values
     const debouncedFirestoreUpdate = useMemo(
-        () => debounce(async (pageId: string, updates: Partial<Page>) => {
+        () => debounce(async (pageId: string, propertyId: string, value: any) => {
             try {
-                await updatePage(pageId, updates);
+                // Use Firestore dot notation to update nested field without overwriting siblings
+                const docRef = doc(db, "pages", pageId);
+                await updateDoc(docRef, {
+                    [`propertyValues.${propertyId}`]: value,
+                    updatedAt: serverTimestamp()
+                });
             } catch (error) {
                 console.error('Failed to update:', error);
             }
@@ -179,12 +193,8 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
 
     const updateCellValue = useCallback((pageId: string, propertyId: string, value: any) => {
         // Optimistic update - change happens immediately in UI
-        // Firestore save is debounced in background
-        debouncedFirestoreUpdate(pageId, {
-            propertyValues: {
-                [propertyId]: value
-            }
-        });
+        // Firestore save is debounced in background with proper nested field update
+        debouncedFirestoreUpdate(pageId, propertyId, value);
     }, [debouncedFirestoreUpdate]);
 
     const handleNewRow = useCallback(async () => {

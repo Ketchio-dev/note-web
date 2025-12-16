@@ -317,6 +317,20 @@ export function subscribeToPage(pageId: string, callback: (page: Page | null) =>
     });
 }
 
+export function subscribeToChildPages(parentId: string, callback: (pages: Page[]) => void) {
+    const q = query(
+        collection(db, "pages"),
+        where("parentId", "==", parentId)
+    );
+    return onSnapshot(q, (snapshot) => {
+        const pages: Page[] = [];
+        snapshot.forEach(doc => {
+            pages.push({ id: doc.id, ...doc.data() } as Page);
+        });
+        callback(pages);
+    });
+}
+
 // --- Members ---
 
 export async function addMemberToWorkspace(workspaceId: string, email: string) {

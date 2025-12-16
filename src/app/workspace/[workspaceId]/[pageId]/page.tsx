@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { getPage, updatePage, Page, subscribeToPage, getChildPages, trackPageView, trackPageUpdate } from "@/lib/workspace";
+import { getPage, updatePage, Page, subscribeToPage, subscribeToChildPages, trackPageView, trackPageUpdate } from "@/lib/workspace";
+import { localStore } from "@/lib/local-store";
 import Editor, { EditorHandle } from "@/components/Editor";
 import AIAssistant from "@/components/AIAssistant";
 import { useAuth } from "@/context/AuthContext";
@@ -17,6 +18,7 @@ import AITaskMenu, { AITask } from "@/components/ai/AITaskMenu";
 import { Sparkles, Share, MoreHorizontal, FileText, Table as TableIcon, Layout, MessageSquare } from "lucide-react";
 import { serverTimestamp } from "firebase/firestore";
 import { debounce } from "lodash";
+import { usePresence } from "@/hooks/usePresence";
 
 export default function PageEditor() {
     const params = useParams();
@@ -50,13 +52,17 @@ export default function PageEditor() {
     // Editor Ref
     const editorRef = useRef<EditorHandle>(null);
 
-    // Debounced save functions (3 seconds) - reduce Firestore writes by 95%
+    // Presence tracking for adaptive debounce
+    const { activeUsers } = usePresence(pageId, user?.uid || null, user?.displayName || user?.email || 'Anonymous');
+    const hasCollaborators = activeUsers.length > 0;
+
+    // Adaptive debounced save functions
     const debouncedSaveContent = useCallback(
         debounce(async (newContent: string) => {
             await updatePage(pageId, { content: newContent });
             setSaving(false);
-        }, 3000),
-        [pageId]
+        }, hasCollaborators ? 300 : 500), // Faster when collaborating
+        [pageId, hasCollaborators]
     );
 
     const debouncedSaveTitle = useCallback(
@@ -64,15 +70,15 @@ export default function PageEditor() {
             await updatePage(pageId, { title: newTitle });
             await trackPageUpdate(pageId, user!.uid, 'title');
             setSaving(false);
-        }, 3000),
-        [pageId, user]
+        }, hasCollaborators ? 500 : 800),
+        [pageId, user, hasCollaborators]
     );
 
     const debouncedSaveCover = useCallback(
         debounce(async (newCover: string) => {
             await updatePage(pageId, { cover: newCover });
             setSaving(false);
-        }, 3000),
+        }, 800),
         [pageId]
     );
 
@@ -80,44 +86,78 @@ export default function PageEditor() {
         debounce(async (newIcon: string) => {
             await updatePage(pageId, { icon: newIcon });
             setSaving(false);
-        }, 3000),
+        }, 800),
         [pageId]
     );
 
-    // Handlers with debounced saves and optimistic UI updates
+    // Handlers with local-first updates
     const handleTitleChange = (newTitle: string) => {
         setTitle(newTitle); // Immediate UI update
         setSaving(true);
+
+        // Save to local cache immediately
+        if (page) {
+            localStore.savePage({ ...page, title: newTitle });
+        }
+
         debouncedSaveTitle(newTitle); // Debounced Firestore save
     };
 
     const handleContentChange = (newContent: string) => {
         setContent(newContent); // Immediate UI update
         setSaving(true);
+
+        // Save to local cache immediately
+        if (page) {
+            localStore.savePage({ ...page, content: newContent });
+        }
+
         debouncedSaveContent(newContent); // Debounced Firestore save
     };
 
     const handleCoverChange = (newCover: string) => {
         setCover(newCover); // Immediate UI update
         setSaving(true);
+
+        if (page) {
+            localStore.savePage({ ...page, cover: newCover });
+        }
+
         debouncedSaveCover(newCover); // Debounced Firestore save
     };
 
     const handleIconChange = (newIcon: string) => {
         setIcon(newIcon); // Immediate UI update
         setSaving(true);
+
+        if (page) {
+            localStore.savePage({ ...page, icon: newIcon });
+        }
+
         debouncedSaveIcon(newIcon); // Debounced Firestore save
     };
 
-    // Data Fetching & View Tracking
+    // Local-first data loading
     useEffect(() => {
         if (pageId && user) {
-            // Track View on Mount
+            // 1. Load from local cache first (instant)
+            localStore.getPage(pageId).then(cachedPage => {
+                if (cachedPage) {
+                    setPage(cachedPage);
+                    setTitle(cachedPage.title);
+                    setContent(cachedPage.content || "");
+                    setCover(cachedPage.cover || "");
+                    setIcon(cachedPage.icon || "");
+                    setLoading(false);
+                }
+            });
+
+            // 2. Track View
             trackPageView(pageId, user.uid);
 
+            // 3. Subscribe to real-time updates
             const unsubscribe = subscribeToPage(pageId, (fetchedPage) => {
                 if (fetchedPage) {
-                    // Ignore local pending writes to prevent overriding user input
                     setPage(fetchedPage);
                     if (!saving) {
                         setTitle(fetchedPage.title);
@@ -125,18 +165,23 @@ export default function PageEditor() {
                         setCover(fetchedPage.cover || "");
                         setIcon(fetchedPage.icon || "");
                     }
+                    // Update local cache
+                    localStore.savePage(fetchedPage);
                 }
                 setLoading(false);
             });
 
             return () => unsubscribe();
         }
-    }, [pageId, user?.uid, saving]);
+    }, [pageId, user?.uid]);
 
-    // Fetch children if database
+    // Subscribe to child pages if database
     useEffect(() => {
         if (page?.type === 'database') {
-            getChildPages(pageId).then(setChildPages);
+            const unsubscribe = subscribeToChildPages(pageId, (pages) => {
+                setChildPages(pages);
+            });
+            return () => unsubscribe();
         } else {
             setChildPages([]);
         }
