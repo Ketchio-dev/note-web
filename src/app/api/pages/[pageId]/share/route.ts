@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { cookies } from 'next/headers';
 
 export async function POST(
     req: Request,
@@ -37,20 +38,43 @@ export async function POST(
         const userSnapshot = await getDocs(userQuery);
 
         let invitedUserId = null;
+        // Check if user is already registered
         if (!userSnapshot.empty) {
             // User is already registered
             invitedUserId = userSnapshot.docs[0].id;
         }
 
-        // Create invitation record
+        // Get current user info for inviterName
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get('session');
+        let inviterName = 'Someone';
+        let inviterUserId = 'unknown';
+
+        if (sessionCookie?.value) {
+            inviterUserId = sessionCookie.value;
+            try {
+                const inviterDoc = await getDoc(doc(db, 'users', inviterUserId));
+                if (inviterDoc.exists()) {
+                    const inviterData = inviterDoc.data();
+                    inviterName = inviterData.displayName || inviterData.email?.split('@')[0] || 'Someone';
+                }
+            } catch (error) {
+                console.error('Error fetching inviter:', error);
+            }
+        }
+
+        // Create invitation record with denormalized data for faster loading
         const invitation = {
             pageId,
             email: email.toLowerCase(),
             role,
-            invitedBy: 'current-user-id', // TODO: Get from auth
+            invitedBy: inviterUserId,
             invitedAt: serverTimestamp(),
             accepted: false,
-            workspaceId: pageData.workspaceId || 'default'
+            workspaceId: pageData.workspaceId || 'default',
+            // Denormalized fields for performance
+            pageTitle: pageData.title || 'Untitled',
+            inviterName: inviterName,
         };
 
         const invitationRef = await addDoc(collection(db, 'invitations'), invitation);

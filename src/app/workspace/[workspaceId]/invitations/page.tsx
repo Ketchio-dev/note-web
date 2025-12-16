@@ -17,6 +17,9 @@ interface InvitationBase {
     invitedAt: Timestamp;
     accepted: boolean;
     workspaceId: string;
+    // Denormalized fields for performance
+    pageTitle?: string;
+    inviterName?: string;
 }
 
 interface EnrichedInvitation extends InvitationBase {
@@ -29,9 +32,7 @@ export default function InvitationsPage({ params }: { params: Promise<{ workspac
     const router = useRouter();
     const [workspaceId, setWorkspaceId] = useState<string>("");
     const [invitations, setInvitations] = useState<InvitationBase[]>([]);
-    const [enrichedInvitations, setEnrichedInvitations] = useState<EnrichedInvitation[]>([]);
     const [loading, setLoading] = useState(true);
-    const [enriching, setEnriching] = useState(false);
     const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
@@ -59,46 +60,6 @@ export default function InvitationsPage({ params }: { params: Promise<{ workspac
 
         return () => unsubscribe();
     }, [user?.email]);
-
-    // Enrich invitations with page titles and inviter names
-    useEffect(() => {
-        if (invitations.length === 0) {
-            setEnrichedInvitations([]);
-            return;
-        }
-
-        const enrichInvitations = async () => {
-            setEnriching(true);
-            try {
-                const enriched = await Promise.all(
-                    invitations.map(async (inv) => {
-                        // Fetch page title
-                        const pageDoc = await getDoc(doc(db, 'pages', inv.pageId));
-                        const pageTitle = pageDoc.data()?.title || 'Untitled Page';
-
-                        // Fetch inviter name
-                        const userDoc = await getDoc(doc(db, 'users', inv.invitedBy));
-                        const inviterName = userDoc.data()?.displayName || userDoc.data()?.email?.split('@')[0] || 'Someone';
-
-                        return { ...inv, pageTitle, inviterName };
-                    })
-                );
-                setEnrichedInvitations(enriched);
-            } catch (error) {
-                console.error('Error enriching invitations:', error);
-                // Fallback to base data
-                setEnrichedInvitations(invitations.map(inv => ({
-                    ...inv,
-                    pageTitle: 'Untitled Page',
-                    inviterName: 'Someone'
-                })));
-            } finally {
-                setEnriching(false);
-            }
-        };
-
-        enrichInvitations();
-    }, [invitations]);
 
     const handleAccept = async (invitationId: string, pageId: string) => {
         setProcessingIds(prev => new Set(prev).add(invitationId));
@@ -269,9 +230,9 @@ export default function InvitationsPage({ params }: { params: Promise<{ workspac
                 </div>
 
                 {/* Invitations List */}
-                {enrichedInvitations.length > 0 ? (
+                {invitations.length > 0 ? (
                     <div className="space-y-4">
-                        {enrichedInvitations.map((invitation) => {
+                        {invitations.map((invitation) => {
                             const isProcessing = processingIds.has(invitation.id);
 
                             return (
