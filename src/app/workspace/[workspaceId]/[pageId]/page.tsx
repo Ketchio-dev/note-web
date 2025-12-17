@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { getPage, updatePage, Page, subscribeToPage, subscribeToChildPages, trackPageView, trackPageUpdate } from "@/lib/workspace";
 import { localStore } from "@/lib/local-store";
 import Editor, { EditorHandle } from "@/components/Editor";
+import UnifiedEditor from "@/components/UnifiedEditor";
 import AIAssistant from "@/components/AIAssistant";
 import { useAuth } from "@/context/AuthContext";
 import DatabaseView from "@/components/DatabaseView";
@@ -345,26 +346,19 @@ export default function PageEditor() {
                     />
                 ) : (
                     <div className={page.locked ? "pointer-events-none opacity-80" : ""}>
-                        <Editor
-                            ref={editorRef}
-                            content={content}
-                            onChange={setContent}
-                            onSelection={(selection) => {
-                                if (selection && selection.text.length > 3) {
-                                    setSelectedText(selection.text);
-                                    // Get position from current selection
-                                    const rect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
-                                    if (rect) {
-                                        setSelectionPos({
-                                            x: rect.left + (rect.width / 2),
-                                            y: rect.bottom + 8
-                                        });
-                                        setShowAIButton(true);
-                                    }
-                                } else {
-                                    setShowAIButton(false);
-                                    setShowAITaskMenu(false);
-                                }
+                        {/* Use UnifiedEditor for block-based editing */}
+                        <UnifiedEditor
+                            pageId={pageId}
+                            workspaceId={workspaceId}
+                            userId={user?.uid || ''}
+                            enableBlocks={true}
+                            enableCollaboration={true}
+                            readOnly={page.locked}
+                            placeholder="Press / for commands..."
+                            onSave={(blocks) => {
+                                setSaving(true);
+                                // Blocks are auto-saved by UnifiedEditor
+                                setTimeout(() => setSaving(false), 1000);
                             }}
                         />
                         <AIAssistant
