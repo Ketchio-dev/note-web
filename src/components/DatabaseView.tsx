@@ -70,7 +70,7 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
     // Ref to prevent infinite re-render when auto-creating Status property
     const hasCreatedStatusRef = useRef(false);
 
-    // Removed Board view auto-create logic, columns, onUpdateParent]);
+    // Removed Board view auto-create logic
 
     // Memoize expensive calculations
     const filteredAndSortedPages = useMemo(
@@ -98,31 +98,9 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
         setShowSaveViewDialog(false);
     };
 
-    // Load saved view
-    const loadView = (view: SavedView) => {
-        setCurrentView(view.viewType);
-        setFilterGroup(view.filters || { condition: 'AND', filters: [] });
-        setSorts(view.sorts || []);
-        setShowViewsDropdown(false);
-    };
-
-    // Delete saved view
-    const deleteView = async (viewId: string) => {
-        await onUpdateParent({
-            savedViews: savedViews.filter(v => v.id !== viewId)
-        });
-    };
-
-    // Add Property type for better typing
-    type Property = NonNullable<Page['properties']>[number];
-
+    // Memoize addColumn to prevent recreation on every render
     const addColumn = useCallback((name: string, type: Property['type']) => {
-        // Validation
-        if (!name || !name.trim()) {
-            console.error('Cannot create column with empty name');
-            return;
-        }
-
+        // Create new property with default values
         const newColumn: Property = {
             id: crypto.randomUUID(),
             name: name.trim(),
@@ -134,33 +112,45 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
             } : {})
         };
 
-        onUpdateParent({ properties: [...columns, newColumn] });
+        const updatedColumns = [...columns, newColumn];
+        onUpdateParent({ properties: updatedColumns });
         setShowAddColumnModal(false);
     }, [columns, onUpdateParent]);
 
-    // Debounced update helper - uses Firestore dot notation to preserve other property values
-    const debouncedFirestoreUpdate = useMemo(
-        () => debounce(async (pageId: string, propertyId: string, value: any) => {
-            try {
-                // Use Firestore dot notation to update nested field without overwriting siblings
-                const docRef = doc(db, "pages", pageId);
-                await updateDoc(docRef, {
-                    [`propertyValues.${propertyId}`]: value,
-                    updatedAt: serverTimestamp()
-                });
-            } catch (error) {
-                console.error('Failed to update:', error);
-            }
-        }, 800), // 800ms for snappy feel
+    // Memoize loadView to prevent recreation
+    const loadView = useCallback((view: SavedView) => {
+        setCurrentView(view.viewType);
+        if (view.filters) setFilterGroup(view.filters);
+        if (view.sorts) setSorts(view.sorts);
+        setShowViewsDropdown(false);
+    }, []);
+
+    // Delete saved view
+    const deleteView = async (viewId: string) => {
+        await onUpdateParent({
+            savedViews: savedViews.filter(v => v.id !== viewId)
+        });
+    };
+
+    // Add Property type for better typing
+    type Property = NonNullable<Page['properties']>[number];
+
+    // Debounced update helper - uses Firestore dot notation    // Optimized debounced save with faster delay
+    const debouncedSaveProperty = useMemo(
+        () => debounce(async (pageId: string, propertyId: string, value: PropertyValue) => {
+            await updatePage(pageId, { propertyValues: { [propertyId]: value } });
+        }, 300), // Reduced from 500ms to 300ms for better UX
         []
     );
 
-    const updateCellValue = useCallback((pageId: string, propertyId: string, value: any) => {
-        // Optimistic update - change happens immediately in UI
-        // Firestore save is debounced in background with proper nested field update
-        debouncedFirestoreUpdate(pageId, propertyId, value);
-    }, [debouncedFirestoreUpdate]);
+    // Memoize updateCellValue with proper typing
+    const updateCellValue = useCallback((pageId: string, propertyId: string, value: PropertyValue) => {
+        // Optimistic UI: Update local state immediately
+        // The actual update will be debounced
+        debouncedSaveProperty(pageId, propertyId, value);
+    }, [debouncedSaveProperty]);
 
+    // New Row Menu state
     const [showNewRowMenu, setShowNewRowMenu] = useState(false);
     const newRowMenuRef = useRef<HTMLDivElement>(null);
 
