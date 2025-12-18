@@ -73,6 +73,8 @@ export default function NotificationCenter({ userId, isOpen, onClose }: Notifica
 
             setNotifications(fetchedNotifications);
             setUnreadCount(fetchedNotifications.filter(n => !n.read).length);
+        }, (error) => {
+            console.error("Error fetching notifications:", error);
         });
 
         return () => unsubscribe();
@@ -174,8 +176,8 @@ function FilterButton({ active, onClick, children }: { active: boolean; onClick:
         <button
             onClick={onClick}
             className={`px-3 py-1 rounded-lg text-sm font-medium transition ${active
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
         >
             {children}

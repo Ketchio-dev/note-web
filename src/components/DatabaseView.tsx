@@ -230,6 +230,33 @@ export default function DatabaseView({ workspaceId, parentPage, childPages, onUp
                     >
                         <Table size={14} /> Table
                     </button>
+                    <button
+                        onClick={() => setCurrentView('list')}
+                        className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition ${currentView === 'list'
+                            ? 'bg-white dark:bg-[#1C1C1C] text-gray-900 dark:text-gray-100 shadow-sm'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                            }`}
+                    >
+                        <ListIcon size={14} /> List
+                    </button>
+                    <button
+                        onClick={() => setCurrentView('calendar')}
+                        className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition ${currentView === 'calendar'
+                            ? 'bg-white dark:bg-[#1C1C1C] text-gray-900 dark:text-gray-100 shadow-sm'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                            }`}
+                    >
+                        <Calendar size={14} /> Calendar
+                    </button>
+                    <button
+                        onClick={() => setCurrentView('timeline')}
+                        className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition ${currentView === 'timeline'
+                            ? 'bg-white dark:bg-[#1C1C1C] text-gray-900 dark:text-gray-100 shadow-sm'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                            }`}
+                    >
+                        <GanttChartSquare size={14} /> Timeline
+                    </button>
                 </div>
 
                 <div className="text-gray-400 text-xs px-2">

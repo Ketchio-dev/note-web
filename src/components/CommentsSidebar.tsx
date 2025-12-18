@@ -70,6 +70,8 @@ export default function CommentsSidebar({ pageId, isOpen, onClose }: CommentsSid
             // Organize into threads
             const threaded = organizeThreads(fetchedComments);
             setComments(threaded);
+        }, (error) => {
+            console.error("Error fetching comments:", error);
         });
 
         return () => unsubscribe();

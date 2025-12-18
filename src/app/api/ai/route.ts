@@ -18,23 +18,27 @@ export async function POST(req: Request) {
         const settingsRef = doc(db, 'users', userId, 'private', 'settings');
         const settingsDoc = await getDoc(settingsRef);
 
-        if (!settingsDoc.exists() || !settingsDoc.data()?.openrouterKey) {
+        let apiKey: string | undefined;
+
+        // Try to get from user settings first
+        if (settingsDoc.exists() && settingsDoc.data()?.openrouterKey) {
+            try {
+                const encryptedKey = settingsDoc.data().openrouterKey;
+                apiKey = decrypt(encryptedKey);
+            } catch (decryptError) {
+                console.error('Decryption failed, falling back to env:', decryptError);
+            }
+        }
+
+        // Fallback to environment variable if no user key or decryption failed
+        if (!apiKey) {
+            apiKey = process.env.OPENROUTER_API_KEY;
+        }
+
+        if (!apiKey) {
             return NextResponse.json(
                 { error: 'API key not configured. Please add your OpenRouter API key in Settings.' },
                 { status: 401 }
-            );
-        }
-
-        // Decrypt the API key
-        let apiKey: string;
-        try {
-            const encryptedKey = settingsDoc.data().openrouterKey;
-            apiKey = decrypt(encryptedKey);
-        } catch (decryptError) {
-            console.error('Decryption failed:', decryptError);
-            return NextResponse.json(
-                { error: 'Failed to decrypt API key. Please re-save your API key in Settings.' },
-                { status: 500 }
             );
         }
 

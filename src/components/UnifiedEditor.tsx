@@ -265,10 +265,13 @@ export default function UnifiedEditor({
             )}
 
             {/* Editor Content */}
-            <div className="editor-content px-4 py-6">
+            <div
+                className="editor-content px-4 py-6 min-h-[500px] cursor-text"
+                onClick={() => editor?.chain().focus().run()}
+            >
                 <EditorContent
                     editor={editor}
-                    className="prose dark:prose-invert max-w-none focus:outline-none"
+                    className="prose dark:prose-invert max-w-none focus:outline-none min-h-[500px]"
                 />
             </div>
 
