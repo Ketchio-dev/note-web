@@ -30,6 +30,14 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
     const [model, setModel] = useState("google/gemini-3.0-pro"); // Default
     const [showModelSelector, setShowModelSelector] = useState(false);
 
+    // Streaming State
+    const [isStreaming, setIsStreaming] = useState(false);
+    const [streamingContent, setStreamingContent] = useState("");
+
+    // Context State
+    const [includeContext, setIncludeContext] = useState(true);
+    const [currentPageTitle, setCurrentPageTitle] = useState<string>("");
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Initial Load & History Fetch
@@ -105,7 +113,7 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
         setShowModelSelector(false);
     };
 
-    const handleSend = async () => {
+    const handleSendWithStreaming = async () => {
         if (!input.trim() || !user || !workspaceId) return;
 
         const userMsg: Message = { role: 'user', content: input };
@@ -113,7 +121,8 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
 
         setMessages(newMessages);
         setInput("");
-        setLoading(true);
+        setIsStreaming(true);
+        setStreamingContent("");
 
         try {
             // 1. Save or Create Chat
@@ -122,34 +131,82 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
                 const newChat = await createChat(workspaceId, user.uid, userMsg);
                 currentChatId = newChat.id;
                 setChatId(currentChatId);
-                loadHistory(); // Refresh history list
+                loadHistory();
             } else {
-                // Update existing chat with user message eagerly (optional, but safer to do after AI response to batch update? 
-                // actually better to update now in case of crash)
                 await updateChatMessages(workspaceId, currentChatId, newMessages);
             }
 
-            // 2. Generate AI content
-            const { content, reasoning } = await generateAIContent(userMsg.content, undefined, model);
+            // 2. Prepare context if enabled
+            let contextText = "";
+            if (includeContext && currentPageTitle) {
+                contextText = `Current page: ${currentPageTitle}`;
+            }
 
-            const aiMsg: Message = { role: 'assistant', content, reasoning };
+            // 3. Call streaming API
+            const response = await fetch('/api/ai/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: contextText ? [
+                        { role: 'system', content: contextText },
+                        { role: 'user', content: userMsg.content }
+                    ] : [{ role: 'user', content: userMsg.content }],
+                    model,
+                    userId: user.uid
+                }),
+            });
+
+            if (!response.body) throw new Error('No response body');
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullContent = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        if (data === '[DONE]') continue;
+
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (parsed.content) {
+                                fullContent += parsed.content;
+                                setStreamingContent(fullContent);
+                            }
+                        } catch (e) {
+                            // Skip
+                        }
+                    }
+                }
+            }
+
+            // 4. Save final message
+            const aiMsg: Message = { role: 'assistant', content: fullContent };
             const finalMessages = [...newMessages, aiMsg];
-
             setMessages(finalMessages);
 
-            // 3. Update Chat with AI response
             if (currentChatId) {
                 await updateChatMessages(workspaceId, currentChatId, finalMessages);
-                loadHistory(); // Refresh to update timestamp order
+                loadHistory();
             }
 
         } catch (error) {
-            console.error("Chat Error", error);
-            setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error." }]);
+            console.error("Stream Error", error);
+            setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, streaming failed." }]);
         } finally {
-            setLoading(false);
+            setIsStreaming(false);
+            setStreamingContent("");
         }
     };
+
+    const handleSend = handleSendWithStreaming;
 
     const handleCopy = async (content: string) => {
         try {
@@ -378,7 +435,21 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
                                     </div>
                                 </div>
                             ))}
-                            {loading && (
+                            {/* Streaming Message */}
+                            {isStreaming && streamingContent && (
+                                <div className="flex gap-4">
+                                    <div className="w-8 h-8 rounded-full bg-[#333] flex-shrink-0 flex items-center justify-center border border-gray-700">
+                                        <Sparkles size={16} className="text-purple-400 animate-pulse" />
+                                    </div>
+                                    <div className="max-w-[85%] flex flex-col gap-2">
+                                        <div className="p-4 rounded-2xl text-[15px] leading-relaxed shadow-sm bg-[#2A2A2A] text-gray-100 border border-gray-800">
+                                            <div className="whitespace-pre-wrap">{streamingContent}</div>
+                                            <div className="inline-block w-2 h-4 bg-purple-400 animate-pulse ml-1" />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {loading && !isStreaming && (
                                 <div className="flex gap-4">
                                     <div className="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center text-white text-xs shrink-0 bg-[#252525]">
                                         <Sparkles size={14} />
