@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { onAuthStateChanged, User, signInWithPopup, signOut as firebaseSignOut } from "firebase/auth";
+import { onAuthStateChanged, User, signInWithPopup, signOut as firebaseSignOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 
@@ -9,6 +9,8 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     signInWithGoogle: () => Promise<void>;
+    signInWithEmail: (email: string, password: string) => Promise<void>;
+    signUpWithEmail: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -16,6 +18,8 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
     signInWithGoogle: async () => { },
+    signInWithEmail: async () => { },
+    signUpWithEmail: async () => { },
     signOut: async () => { },
 });
 
@@ -63,6 +67,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await signInWithPopup(auth, googleProvider);
         } catch (error) {
             console.error("Error signing in with Google", error);
+            throw error;
+        }
+    };
+
+    const signInWithEmail = async (email: string, password: string) => {
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+            console.error("Error signing in with email", error);
+            throw error;
+        }
+    };
+
+    const signUpWithEmail = async (email: string, password: string) => {
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+            console.error("Error signing up with email", error);
+            throw error;
         }
     };
 
@@ -71,11 +94,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await firebaseSignOut(auth);
         } catch (error) {
             console.error("Error signing out", error);
+            throw error;
         }
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+        <AuthContext.Provider value={{
+            user,
+            loading,
+            signInWithGoogle,
+            signInWithEmail,
+            signUpWithEmail,
+            signOut
+        }}>
             {children}
         </AuthContext.Provider>
     );
