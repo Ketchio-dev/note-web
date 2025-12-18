@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
 import { useParams } from "next/navigation";
 import { getPage, updatePage, Page, subscribeToPage, subscribeToChildPages, trackPageView, trackPageUpdate } from "@/lib/workspace";
 import { localStore } from "@/lib/local-store";
 import Editor, { EditorHandle } from "@/components/Editor";
 import UnifiedEditor from "@/components/UnifiedEditor";
-import AIAssistant from "@/components/AIAssistant";
+// Lazy load AIAssistant to reduce initial bundle size
+const AIAssistant = lazy(() => import("@/components/AIAssistant"));
 import { useAuth } from "@/context/AuthContext";
 import DatabaseView from "@/components/DatabaseView";
 import SettingsModal from "@/components/SettingsModal";
@@ -362,17 +363,19 @@ export default function PageEditor() {
                                 setTimeout(() => setSaving(false), 1000);
                             }}
                         />
-                        <AIAssistant
-                            workspaceId={workspaceId}
-                            editorContent={content}
-                            initialPrompt={aiPrompt}
-                            onPromptUsed={() => setAiPrompt("")}
-                            onInsertContent={(text) => {
-                                if (editorRef.current) editorRef.current.insertContent(text);
-                                else setContent(prev => prev + text);
-                            }}
-                            onReplaceContent={(text) => setContent(text)}
-                        />
+                        <Suspense fallback={<div className="opacity-50">Loading AI...</div>}>
+                            <AIAssistant
+                                workspaceId={workspaceId}
+                                editorContent={content}
+                                initialPrompt={aiPrompt}
+                                onPromptUsed={() => setAiPrompt("")}
+                                onInsertContent={(text) => {
+                                    if (editorRef.current) editorRef.current.insertContent(text);
+                                    else setContent(prev => prev + text);
+                                }}
+                                onReplaceContent={(text) => setContent(text)}
+                            />
+                        </Suspense>
 
                         {/* Floating AI Button */}
                         {showAIButton && selectionPos && !showAITaskMenu && (
