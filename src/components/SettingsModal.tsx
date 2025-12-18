@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, UserPlus, Users, Key, LogOut } from "lucide-react";
+import { X, UserPlus, Users, Key, LogOut, Palette } from "lucide-react";
 import { addMemberToWorkspace, getWorkspaceMembers } from "@/lib/workspace";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { useTheme, BUILTIN_THEMES } from "@/lib/themes";
 
 export default function SettingsModal({ isOpen, onClose, initialTab = 'general' }: { isOpen: boolean; onClose: () => void; initialTab?: 'general' | 'members' }) {
     const params = useParams();
@@ -23,6 +24,9 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
     const [members, setMembers] = useState<any[]>([]);
     const [loadingMembers, setLoadingMembers] = useState(false);
     const [inviteStatus, setInviteStatus] = useState("");
+
+    // Theme
+    const { currentTheme, changeTheme, themes } = useTheme();
 
     useEffect(() => {
         if (isOpen && user) {
@@ -225,6 +229,35 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
                                         <option value="mistralai/mistral-large">Mistral Large</option>
                                     </optgroup>
                                 </select>
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                                    <Palette size={16} />
+                                    Theme
+                                </label>
+                                <p className="text-xs text-gray-500 mb-3">
+                                    Choose your preferred theme for the interface.
+                                </p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {BUILTIN_THEMES.map(theme => (
+                                        <button
+                                            key={theme.id}
+                                            onClick={() => changeTheme(theme.id)}
+                                            className={`p-3 border rounded-lg transition ${currentTheme.id === theme.id
+                                                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                                                    : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
+                                                }`}
+                                        >
+                                            <div className="text-sm font-medium mb-1">{theme.name}</div>
+                                            <div className="flex gap-1">
+                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: theme.colors.primary }}></div>
+                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: theme.colors.secondary }}></div>
+                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: theme.colors.accent }}></div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             <div className="flex justify-end">
                                 <button

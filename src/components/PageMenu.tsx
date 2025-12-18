@@ -20,6 +20,7 @@ import {
     Clock
 } from 'lucide-react';
 import { Page } from '@/lib/workspace';
+import ExportImportModal from '@/components/ExportImportModal';
 
 interface PageMenuProps {
     page: Page;
@@ -31,6 +32,7 @@ interface PageMenuProps {
 
 export default function PageMenu({ page, onUpdate, onDelete, onDuplicate, onOpenUpdates }: PageMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isExportImportOpen, setIsExportImportOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Close menu when clicking outside (simple implementation using backdrop)
@@ -198,7 +200,10 @@ export default function PageMenu({ page, onUpdate, onDelete, onDuplicate, onOpen
                                 className="hidden"
                                 accept=".md,.txt,.json,.html"
                             />
-                            <button className="w-full flex items-center px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2C2C2C] transition-colors text-sm text-gray-700 dark:text-gray-300 group">
+                            <button
+                                onClick={() => { setIsOpen(false); setIsExportImportOpen(true); }}
+                                className="w-full flex items-center px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2C2C2C] transition-colors text-sm text-gray-700 dark:text-gray-300 group"
+                            >
                                 <Download size={15} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 mr-3" />
                                 <span>Export</span>
                             </button>
@@ -217,6 +222,14 @@ export default function PageMenu({ page, onUpdate, onDelete, onDuplicate, onOpen
                     </div>
                 </>
             )}
+
+            {/* Export/Import Modal */}
+            <ExportImportModal
+                isOpen={isExportImportOpen}
+                onClose={() => setIsExportImportOpen(false)}
+                pageId={page.id}
+                pageTitle={page.title}
+            />
         </div>
     );
 }
