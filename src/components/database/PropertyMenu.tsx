@@ -131,7 +131,7 @@ export default function PropertyMenu({ property, onUpdate, onDelete, onDuplicate
                 </button>
 
                 {showTypeDropdown && (
-                    <div className="mt-1 max-h-64 overflow-y-auto bg-white dark:bg-[#2C2C2C] rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg">
+                    <div className="mt-1 max-h-[300px] overflow-y-auto bg-white dark:bg-[#2C2C2C] rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
                         {PROPERTY_TYPES.map((type) => {
                             const Icon = type.icon;
                             return (
