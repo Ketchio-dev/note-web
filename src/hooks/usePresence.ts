@@ -47,7 +47,7 @@ export function usePresence(
                 await setDoc(presenceRef, {
                     userId,
                     userName: userName || 'Anonymous',
-                    userAvatar: userAvatar,
+                    userAvatar: userAvatar || null,
                     color: userColor,
                     lastSeen: serverTimestamp()
                 }, { merge: true });

@@ -5,7 +5,13 @@ import { doc, getDoc } from 'firebase/firestore';
 
 export async function POST(req: Request) {
     try {
-        const { messages, model, userId } = await req.json();
+        let body;
+        try {
+            body = await req.json();
+        } catch (e) {
+            return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+        }
+        const { messages, model, userId } = body;
 
         if (!userId) {
             return NextResponse.json(
@@ -132,4 +138,11 @@ export async function POST(req: Request) {
             { status: 500 }
         );
     }
+}
+
+export async function GET() {
+    return NextResponse.json(
+        { error: 'Method Not Allowed. Please use POST.' },
+        { status: 405 }
+    );
 }

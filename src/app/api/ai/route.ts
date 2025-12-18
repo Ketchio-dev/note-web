@@ -5,9 +5,17 @@ import { doc, getDoc } from 'firebase/firestore';
 
 export async function POST(req: Request) {
     try {
-        const { messages, prompt, model, userId } = await req.json();
+        let body;
+        try {
+            body = await req.json();
+        } catch (e) {
+            console.warn('[AI API] Failed to parse request body:', e);
+            return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+        }
+        const { messages, prompt, model, userId } = body;
 
         if (!userId) {
+            console.warn('[AI API] Missing userId in request');
             return NextResponse.json(
                 { error: 'User ID is required' },
                 { status: 400 }
@@ -21,23 +29,36 @@ export async function POST(req: Request) {
         let apiKey: string | undefined;
 
         // Try to get from user settings first
-        if (settingsDoc.exists() && settingsDoc.data()?.openrouterKey) {
-            try {
-                const encryptedKey = settingsDoc.data().openrouterKey;
-                apiKey = decrypt(encryptedKey);
-            } catch (decryptError) {
-                console.error('Decryption failed, falling back to env:', decryptError);
+        try {
+            if (settingsDoc.exists() && settingsDoc.data()?.openrouterKey) {
+                try {
+                    const encryptedKey = settingsDoc.data().openrouterKey;
+                    apiKey = decrypt(encryptedKey);
+                } catch (decryptError) {
+                    console.error('[AI API] Decryption failed for user:', userId, decryptError);
+                }
             }
+        } catch (firestoreError) {
+            console.warn('[AI API] Failed to fetch settings, likely permission issue or missing doc:', firestoreError);
+            // Fallback will naturally happen since apiKey is undefined
         }
 
         // Fallback to environment variable if no user key or decryption failed
         if (!apiKey) {
             apiKey = process.env.OPENROUTER_API_KEY;
+            if (!apiKey) {
+                console.warn('[AI API] No API key found (User Settings or Env)');
+            } else {
+                console.log('[AI API] Using Environment API Key');
+            }
         }
 
         if (!apiKey) {
             return NextResponse.json(
-                { error: 'API key not configured. Please add your OpenRouter API key in Settings.' },
+                {
+                    error: 'API key not configured. Please add your OpenRouter API key in Settings.',
+                    details: 'OPENROUTER_API_KEY env var is missing and no user key provided.'
+                },
                 { status: 401 }
             );
         }
@@ -52,6 +73,8 @@ export async function POST(req: Request) {
                 { "role": "user", "content": prompt }
             ];
         }
+
+        console.log('[AI API] Sending request to OpenRouter', { model: model || "openai/gpt-3.5-turbo" });
 
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -70,6 +93,7 @@ export async function POST(req: Request) {
 
         const data = await response.json();
         if (data.error) {
+            console.error('[AI API] OpenRouter Error:', data.error);
             throw new Error(data.error.message || 'OpenRouter Error');
         }
 
@@ -80,7 +104,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ content, reasoning });
 
     } catch (error: any) {
-        console.error("AI API Error:", error);
+        console.error("[AI API] Internal Error:", error);
         return NextResponse.json(
             { error: error.message || 'Internal Server Error' },
             { status: 500 }
