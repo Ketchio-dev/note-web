@@ -9,6 +9,13 @@ type StreamMessage = {
 };
 
 const DEFAULT_MODEL = process.env.OPENROUTER_DEFAULT_MODEL ?? 'openai/gpt-4o-mini';
+const MODEL_ALIASES: Record<string, string> = {
+    'gpt-4o-mini': 'openai/gpt-4o-mini',
+    'anthropic/claude-4.5-sonnet': 'anthropic/claude-3.5-sonnet',
+    'anthropic/claude-4.5-opus': 'anthropic/claude-3-opus',
+    'google/gemini-3.0-pro': 'google/gemini-3-pro-preview',
+    'openai/gpt-5.2': 'openai/gpt-5.2-chat',
+};
 
 function normalizeModel(model: unknown): string {
     if (typeof model !== 'string' || !model.trim() || model === 'default') {
@@ -16,11 +23,7 @@ function normalizeModel(model: unknown): string {
     }
 
     const trimmed = model.trim();
-    if (trimmed === 'gpt-4o-mini') {
-        return 'openai/gpt-4o-mini';
-    }
-
-    return trimmed;
+    return MODEL_ALIASES[trimmed] || trimmed;
 }
 
 function buildMessages(messages: unknown, prompt: unknown): StreamMessage[] {
@@ -164,7 +167,7 @@ export async function POST(req: Request) {
                         const error = await response.json().catch(() => null);
                         const message = error?.error?.message || `API request failed (${response.status})`;
                         controller.enqueue(
-                            encoder.encode(`data: ${JSON.stringify({ error: message, content: 'Streaming request failed.' })}\n\n`)
+                            encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`)
                         );
                         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
                         controller.close();

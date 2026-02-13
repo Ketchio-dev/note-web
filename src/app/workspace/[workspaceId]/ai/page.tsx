@@ -232,6 +232,7 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
             const decoder = new TextDecoder();
             let fullContent = "";
             let buffer = "";
+            let streamError: string | null = null;
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -249,6 +250,10 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
 
                     try {
                         const parsed = JSON.parse(payload) as { content?: string };
+                        if (typeof (parsed as { error?: unknown }).error === "string") {
+                            streamError = (parsed as { error: string }).error;
+                            continue;
+                        }
                         if (parsed.content) {
                             fullContent += parsed.content;
                             setStreamingContent(fullContent);
@@ -257,6 +262,10 @@ export default function AIDashboard({ params }: { params: Promise<{ workspaceId:
                         // ignore malformed chunk
                     }
                 }
+            }
+
+            if (streamError) {
+                throw new Error(streamError);
             }
 
             const assistantMessage: Message = {

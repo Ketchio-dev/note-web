@@ -104,6 +104,7 @@ export function useAIChat({
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
             let accumulatedContent = '';
+            let streamError: string | null = null;
 
             if (!reader) {
                 throw new Error('No response body');
@@ -123,10 +124,10 @@ export function useAIChat({
                         if (data === '[DONE]') continue;
 
                         try {
-                            const json = JSON.parse(data);
-
+                            const json = JSON.parse(data) as { content?: string; error?: string };
                             if (json.error) {
-                                throw new Error(json.error);
+                                streamError = json.error;
+                                continue;
                             }
 
                             if (json.content) {
@@ -139,11 +140,15 @@ export function useAIChat({
                                         : msg
                                 ));
                             }
-                        } catch (e) {
+                        } catch {
                             // Skip invalid JSON
                         }
                     }
                 }
+            }
+
+            if (streamError) {
+                throw new Error(streamError);
             }
 
             // Parse Actions from final content
