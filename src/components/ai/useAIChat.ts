@@ -98,12 +98,22 @@ export function useAIChat({
             });
 
             if (!response.ok) {
-                throw new Error('Failed to start streaming');
+                let message = `Failed to start streaming (${response.status})`;
+                try {
+                    const data = await response.json() as { error?: string };
+                    if (typeof data.error === 'string' && data.error.trim()) {
+                        message = data.error;
+                    }
+                } catch {
+                    // ignore parse errors
+                }
+                throw new Error(message);
             }
 
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
             let accumulatedContent = '';
+            let buffer = '';
             let streamError: string | null = null;
 
             if (!reader) {
@@ -114,8 +124,9 @@ export function useAIChat({
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() ?? '';
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
