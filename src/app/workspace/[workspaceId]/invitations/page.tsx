@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, getDoc }
 import { Check, X, Mail, Clock, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { fetchWithAuth } from "@/lib/client-api";
 
 interface InvitationBase {
     id: string;
@@ -71,11 +72,8 @@ export default function InvitationsPage({ params }: { params: Promise<{ workspac
                 return;
             }
 
-            const res = await fetch(`/api/invitations/${invitationId}/accept`, {
+            const res = await fetchWithAuth(`/api/invitations/${invitationId}/accept`, {
                 method: "POST",
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify({ userId: user.uid }),
             });
 
@@ -124,11 +122,8 @@ export default function InvitationsPage({ params }: { params: Promise<{ workspac
                 return;
             }
 
-            const res = await fetch(`/api/invitations/${invitationId}/reject`, {
+            const res = await fetchWithAuth(`/api/invitations/${invitationId}/reject`, {
                 method: "POST",
-                headers: {
-                    'Content-Type': 'application/json',
-                },
                 body: JSON.stringify({ userId: user.uid }),
             });
 

@@ -1,3 +1,5 @@
+import { fetchWithAuth } from '@/lib/client-api';
+
 const MODEL_MAPPING: Record<string, string> = {
     "anthropic/claude-4.5-sonnet": "anthropic/claude-3.5-sonnet",
     "anthropic/claude-4.5-opus": "anthropic/claude-3-opus",
@@ -22,10 +24,6 @@ export async function generateAIContent(
     userId?: string
 ): Promise<AIResponse> {
     try {
-        if (!userId) {
-            return { content: "Error: User authentication required. Please log in." };
-        }
-
         const storedModel = localStorage.getItem("openrouter_model");
         // Prefer override, then stored, then default (Future ID)
         const rawModel = modelOverride || storedModel || "google/gemini-3.0-pro";
@@ -41,11 +39,8 @@ export async function generateAIContent(
         }
 
         // Pass userId to server for API key lookup
-        const res = await fetch('/api/ai', {
+        const res = await fetchWithAuth('/api/ai', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify({ messages, model, userId })
         });
 

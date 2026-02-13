@@ -1,48 +1,42 @@
 import { NextResponse } from 'next/server';
-import { apiRateLimiter, getClientIp } from '@/lib/rateLimit';
 import { requireAuth } from '@/lib/server-auth';
 import { acceptInvitation } from '@/lib/server-invitations';
 import { toPlainJson } from '@/lib/server-json';
 
-export async function POST(
-    req: Request,
-    context: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: Request) {
     try {
-        const clientIp = getClientIp(req);
-        const allowed = apiRateLimiter.check(10, clientIp);
-
-        if (!allowed) {
-            return NextResponse.json(
-                { error: 'Too many requests. Please try again later.' },
-                { status: 429 }
-            );
-        }
-
         const auth = await requireAuth(req);
         if (!auth.ok) {
             return auth.response;
         }
 
-        const { id } = await context.params;
-        const body = await req.json() as { userId?: string };
+        const body = await req.json() as {
+            invitationId?: string;
+            userId?: string;
+        };
+
+        if (!body.invitationId) {
+            return NextResponse.json(
+                { error: 'invitationId is required' },
+                { status: 400 }
+            );
+        }
 
         if (body.userId && body.userId !== auth.user.uid) {
             return NextResponse.json({ error: 'Forbidden: userId mismatch' }, { status: 403 });
         }
 
-        const invitation = await acceptInvitation(id, auth.user);
+        const invitation = await acceptInvitation(body.invitationId, auth.user);
 
         return NextResponse.json(toPlainJson({
-            success: true,
-            pageId: invitation.pageId || null,
+            invitationId: invitation.id,
             workspaceId: invitation.workspaceId || null,
+            pageId: invitation.pageId || null,
             role: invitation.role || 'viewer',
             status: invitation.status || 'accepted',
         }));
     } catch (error) {
         const err = error as Error;
-        console.error('Accept Invitation Error:', err);
 
         if (err.message === 'INVITATION_NOT_FOUND') {
             return NextResponse.json({ error: 'Invitation not found' }, { status: 404 });
@@ -52,6 +46,10 @@ export async function POST(
             return NextResponse.json({ error: 'This invitation is not for your email' }, { status: 403 });
         }
 
-        return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+        console.error('Accept Invitation Error:', error);
+        return NextResponse.json(
+            { error: err.message || 'Internal Server Error' },
+            { status: 500 }
+        );
     }
 }

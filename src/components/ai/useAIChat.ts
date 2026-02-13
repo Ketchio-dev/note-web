@@ -3,6 +3,7 @@ import { generateAIContent } from '@/lib/ai';
 import { updatePage, Page } from '@/lib/workspace';
 import { toast } from 'sonner';
 import { Message, AIAction } from '@/types/ai';
+import { fetchWithAuth } from '@/lib/client-api';
 
 interface UseAIChatProps {
     workspaceId: string;
@@ -91,9 +92,8 @@ export function useAIChat({
             ];
 
             // === STREAMING ===
-            const response = await fetch('/api/ai/stream', {
+            const response = await fetchWithAuth('/api/ai/stream', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages, model, userId })
             });
 

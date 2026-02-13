@@ -1,59 +1,128 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { requireAuth } from '@/lib/server-auth';
+import { getAdminFirestore } from '@/lib/firebase-admin';
+import { toPlainJson } from '@/lib/server-json';
+
+interface WorkspaceData {
+    ownerId?: string;
+    members?: string[];
+    memberRoles?: Record<string, string[]>;
+}
+
+interface PagePermissions {
+    owner?: string;
+    shared?: Record<string, string>;
+}
+
+function canInviteToWorkspace(workspace: WorkspaceData, uid: string): boolean {
+    const members = Array.isArray(workspace.members) ? workspace.members : [];
+    const role = workspace.memberRoles?.[uid] || [];
+
+    return workspace.ownerId === uid || members.includes(uid) || role.includes('admin') || role.includes('write');
+}
+
+function canInviteToPage(page: Record<string, unknown>, uid: string): boolean {
+    const permissions = (page.permissions || {}) as PagePermissions;
+    const role = permissions.shared?.[uid];
+
+    return (
+        page.ownerId === uid
+        || page.createdBy === uid
+        || permissions.owner === uid
+        || role === 'editor'
+        || role === 'owner'
+        || role === 'admin'
+    );
+}
 
 export async function POST(req: Request) {
     try {
-        const body = await req.json();
-        const { pageId, email, role, invitedBy } = body;
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
 
-        if (!pageId || !email || !role || !invitedBy) {
+        const body = await req.json() as {
+            pageId?: string;
+            workspaceId?: string;
+            email?: string;
+            role?: string;
+            invitedBy?: string;
+        };
+
+        if (body.invitedBy && body.invitedBy !== auth.user.uid) {
+            return NextResponse.json({ error: 'Forbidden: invitedBy mismatch' }, { status: 403 });
+        }
+
+        if (!body.email || (!body.pageId && !body.workspaceId)) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
                 { status: 400 }
             );
         }
 
-        // Verify page exists
-        const pageRef = doc(db, 'pages', pageId);
-        const pageSnap = await getDoc(pageRef);
-
-        if (!pageSnap.exists()) {
-            return NextResponse.json({ error: 'Page not found' }, { status: 404 });
+        if (body.pageId && body.workspaceId) {
+            return NextResponse.json({ error: 'Provide either pageId or workspaceId, not both' }, { status: 400 });
         }
 
-        // Verify inviter permissions (Mock check: inviter must match owner/creator)
-        // In real app, check 'invitedBy' against page owner or permissions.shared
-        /*
-        const pageData = pageSnap.data();
-        if (pageData.createdBy !== invitedBy && pageData.ownerId !== invitedBy) {
-             // Check if editor?
-             return NextResponse.json({ error: 'Unauthorized to invite' }, { status: 403 });
-        }
-        */
+        const db = getAdminFirestore();
+        const normalizedEmail = body.email.toLowerCase();
 
-        const invitationData = {
-            pageId,
-            email,
-            role,
-            invitedBy,
+        if (body.workspaceId) {
+            const workspaceRef = db.collection('workspaces').doc(body.workspaceId);
+            const workspaceSnap = await workspaceRef.get();
+
+            if (!workspaceSnap.exists) {
+                return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
+            }
+
+            const workspace = workspaceSnap.data() as WorkspaceData;
+            if (!canInviteToWorkspace(workspace, auth.user.uid)) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            }
+        }
+
+        if (body.pageId) {
+            const pageRef = db.collection('pages').doc(body.pageId);
+            const pageSnap = await pageRef.get();
+
+            if (!pageSnap.exists) {
+                return NextResponse.json({ error: 'Page not found' }, { status: 404 });
+            }
+
+            const page = pageSnap.data() as Record<string, unknown>;
+            if (!canInviteToPage(page, auth.user.uid)) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            }
+        }
+
+        const invitationRef = db.collection('invitations').doc();
+        const now = new Date();
+
+        const invitation = {
+            id: invitationRef.id,
+            type: body.workspaceId ? 'workspace' : 'page',
+            pageId: body.pageId,
+            workspaceId: body.workspaceId,
+            email: normalizedEmail,
+            role: body.role || 'member',
+            invitedBy: auth.user.uid,
             status: 'pending',
-            createdAt: serverTimestamp(),
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+            accepted: false,
+            invitedAt: now,
+            createdAt: now,
+            updatedAt: now,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         };
 
-        const docRef = await addDoc(collection(db, 'invitations'), invitationData);
+        await invitationRef.set(invitation);
 
-        return NextResponse.json({
-            success: true,
-            id: docRef.id,
-            invitation: { id: docRef.id, ...invitationData }
-        });
-
-    } catch (error: any) {
+        return NextResponse.json(toPlainJson(invitation), { status: 201 });
+    } catch (error) {
+        const err = error as Error;
         console.error('Create Invitation Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }
@@ -61,61 +130,55 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
     try {
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
+
+        const db = getAdminFirestore();
         const { searchParams } = new URL(req.url);
-        const email = searchParams.get('email');
-        const userId = searchParams.get('userId');
+        const workspaceId = searchParams.get('workspaceId');
 
-        if (!email && !userId) {
-            return NextResponse.json(
-                { error: 'Email or User ID required' },
-                { status: 400 }
-            );
+        if (workspaceId) {
+            const workspaceSnap = await db.collection('workspaces').doc(workspaceId).get();
+            if (!workspaceSnap.exists) {
+                return NextResponse.json({ invitations: [] });
+            }
+
+            const workspace = workspaceSnap.data() as WorkspaceData;
+            if (!canInviteToWorkspace(workspace, auth.user.uid)) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            }
+
+            const snapshot = await db.collection('invitations').where('workspaceId', '==', workspaceId).get();
+            const invitations = snapshot.docs.map((invitationDoc) => ({ id: invitationDoc.id, ...invitationDoc.data() }));
+            return NextResponse.json({ invitations: toPlainJson(invitations) });
         }
 
-        // Simulating the query since we might not have a composite index 
-        // In reality, we should query by email OR invitedBy (userId)
+        const invitationsByInviter = await db.collection('invitations').where('invitedBy', '==', auth.user.uid).get();
 
-        // Let's assume we want to see invitations *received* by email
-        // or *sent* by userId.
+        const invitationsByEmail = auth.user.email
+            ? await db.collection('invitations').where('email', '==', auth.user.email.toLowerCase()).get()
+            : null;
 
-        // For simple testing (TC007 usually lists invitations), let's support listing by email.
+        const map = new Map<string, Record<string, unknown>>();
 
-        // NOTE: This usually requires an index on 'email'
-        // const q = query(collection(db, 'invitations'), where('email', '==', email));
-
-        // For now, let's just return a success/mock if DB query fails due to index,
-        // OR try to actually query.
-
-        // Let's return the invitations from Firestore, assuming index exists or will be created.
-
-        // If index missing, this might throw 500/Precondition. 
-        // We will wrap in try/catch to return empty list or error gracefully.
-
-        // Actually, let's just return Mock for now if we want to pass the test without index.
-        // But the user was instructed to create indexes. So we should code it correctly.
-
-        // import query, where, getDocs
-        const { collection, query, where, getDocs } = await import('firebase/firestore');
-
-        const invitationsRef = collection(db, 'invitations');
-        let q;
-
-        if (email) {
-            q = query(invitationsRef, where('email', '==', email));
-        } else {
-            // invitedBy
-            q = query(invitationsRef, where('invitedBy', '==', userId));
+        for (const invitationDoc of invitationsByInviter.docs) {
+            map.set(invitationDoc.id, { id: invitationDoc.id, ...invitationDoc.data() });
         }
 
-        const snapshot = await getDocs(q);
-        const invitations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (invitationsByEmail) {
+            for (const invitationDoc of invitationsByEmail.docs) {
+                map.set(invitationDoc.id, { id: invitationDoc.id, ...invitationDoc.data() });
+            }
+        }
 
-        return NextResponse.json({ invitations });
-
-    } catch (error: any) {
+        return NextResponse.json({ invitations: toPlainJson([...map.values()]) });
+    } catch (error) {
+        const err = error as Error;
         console.error('List Invitations Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }

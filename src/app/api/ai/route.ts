@@ -1,57 +1,136 @@
 import { NextResponse } from 'next/server';
 import { decrypt } from '@/lib/crypto';
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { getAdminFirestore } from '@/lib/firebase-admin';
+import { requireAuth } from '@/lib/server-auth';
+
+type AIMessage = {
+    role: 'system' | 'user' | 'assistant';
+    content: string;
+};
+
+const DEFAULT_MODEL = process.env.OPENROUTER_DEFAULT_MODEL ?? 'openai/gpt-4o-mini';
+
+function normalizeModel(model: unknown): string {
+    if (typeof model !== 'string' || !model.trim() || model === 'default') {
+        return DEFAULT_MODEL;
+    }
+
+    const trimmed = model.trim();
+    if (trimmed === 'gpt-4o-mini') {
+        return 'openai/gpt-4o-mini';
+    }
+
+    return trimmed;
+}
+
+function buildMessages(messages: unknown, prompt: unknown): AIMessage[] {
+    if (Array.isArray(messages) && messages.length > 0) {
+        const normalized = messages
+            .map((message) => {
+                if (!message || typeof message !== 'object') {
+                    return null;
+                }
+
+                const role = (message as { role?: unknown }).role;
+                const content = (message as { content?: unknown }).content;
+
+                if (
+                    (role === 'system' || role === 'user' || role === 'assistant')
+                    && typeof content === 'string'
+                    && content.trim().length > 0
+                ) {
+                    return { role, content } as AIMessage;
+                }
+
+                return null;
+            })
+            .filter((msg): msg is AIMessage => msg !== null);
+
+        if (normalized.length > 0) {
+            return normalized;
+        }
+    }
+
+    if (typeof prompt === 'string' && prompt.trim()) {
+        return [
+            {
+                role: 'system',
+                content: 'You are a helpful writing assistant. Answer clearly and concisely.',
+            },
+            {
+                role: 'user',
+                content: prompt,
+            },
+        ];
+    }
+
+    return [
+        {
+            role: 'user',
+            content: 'Please provide a concise helpful response.',
+        },
+    ];
+}
+
+async function resolveApiKey(userId: string): Promise<{ apiKey?: string; source: 'user' | 'environment' | 'none' }> {
+    try {
+        const db = getAdminFirestore();
+        const settingsDoc = await db
+            .collection('users')
+            .doc(userId)
+            .collection('private')
+            .doc('settings')
+            .get();
+
+        const encrypted = settingsDoc.data()?.openrouterKey;
+        if (typeof encrypted === 'string' && encrypted.trim()) {
+            try {
+                return { apiKey: decrypt(encrypted), source: 'user' };
+            } catch (decryptError) {
+                console.error('[AI API] Failed to decrypt user API key:', decryptError);
+            }
+        }
+    } catch (firestoreError) {
+        console.warn('[AI API] Failed to load user settings:', firestoreError);
+    }
+
+    const envKey = process.env.OPENROUTER_API_KEY;
+    if (envKey) {
+        return { apiKey: envKey, source: 'environment' };
+    }
+
+    return { source: 'none' };
+}
 
 export async function POST(req: Request) {
     try {
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
+
         let body;
         try {
             body = await req.json();
-        } catch (e) {
-            console.warn('[AI API] Failed to parse request body:', e);
+        } catch (error) {
+            console.warn('[AI API] Failed to parse request body:', error);
             return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
         }
-        const { messages, prompt, model, userId } = body;
 
-        if (!userId) {
-            console.warn('[AI API] Missing userId in request');
-            return NextResponse.json(
-                { error: 'User ID is required' },
-                { status: 400 }
-            );
+        const { messages, prompt, model, userId } = body as {
+            messages?: unknown;
+            prompt?: unknown;
+            model?: unknown;
+            userId?: unknown;
+        };
+
+        if (userId && userId !== auth.user.uid) {
+            return NextResponse.json({ error: 'Forbidden: userId mismatch' }, { status: 403 });
         }
 
-        // Fetch encrypted API key from Firestore
-        let apiKey: string | undefined;
-
-        try {
-            const settingsRef = doc(db, 'users', userId, 'private', 'settings');
-            const settingsDoc = await getDoc(settingsRef);
-
-            // Try to get from user settings first
-            if (settingsDoc.exists() && settingsDoc.data()?.openrouterKey) {
-                try {
-                    const encryptedKey = settingsDoc.data().openrouterKey;
-                    apiKey = decrypt(encryptedKey);
-                } catch (decryptError) {
-                    console.error('[AI API] Decryption failed for user:', userId, decryptError);
-                }
-            }
-        } catch (firestoreError) {
-            console.warn('[AI API] Failed to fetch settings, likely permission issue or missing doc:', firestoreError);
-            // Fallback will naturally happen since apiKey is undefined
-        }
-
-        // Fallback to environment variable if no user key or decryption failed
-        if (!apiKey) {
-            apiKey = process.env.OPENROUTER_API_KEY;
-            if (!apiKey) {
-                console.warn('[AI API] No API key found (User Settings or Env)');
-            } else {
-                console.log('[AI API] Using Environment API Key');
-            }
-        }
+        const payloadMessages = buildMessages(messages, prompt);
+        const selectedModel = normalizeModel(model);
+        const { apiKey, source } = await resolveApiKey(auth.user.uid);
 
         if (!apiKey) {
             return NextResponse.json(
@@ -63,50 +142,54 @@ export async function POST(req: Request) {
             );
         }
 
-        // Construct payload
-        // If 'messages' is provided (new way), use it.
-        // If only 'prompt' is provided (legacy slash command), construct messages.
-        let payloadMessages = messages;
-        if (!payloadMessages && prompt) {
-            payloadMessages = [
-                { "role": "system", "content": "You are a helpful writing assistant. Continue the text or answer the user's prompt directly and concisely." },
-                { "role": "user", "content": prompt }
-            ];
-        }
-
-        console.log('[AI API] Sending request to OpenRouter', { model: model || "openai/gpt-3.5-turbo" });
-
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://note.myarchive.cc", // Optional but good practice
-                "X-Title": "MyArchive Note"
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://note.myarchive.cc',
+                'X-Title': 'MyArchive Note',
             },
             body: JSON.stringify({
-                "model": model || "openai/gpt-3.5-turbo",
-                "messages": payloadMessages,
-                "reasoning": { "max_tokens": 2048 }
-            })
+                model: selectedModel,
+                messages: payloadMessages,
+                reasoning: { max_tokens: 2048 },
+            }),
         });
 
-        const data = await response.json();
-        if (data.error) {
-            console.error('[AI API] OpenRouter Error:', data.error);
-            throw new Error(data.error.message || 'OpenRouter Error');
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+            const upstreamMessage = data?.error?.message || `OpenRouter request failed (${response.status})`;
+            console.error('[AI API] OpenRouter Error:', response.status, upstreamMessage);
+
+            if (response.status === 401 || response.status === 403) {
+                return NextResponse.json(
+                    { error: 'Invalid or expired token. Please reauthenticate.' },
+                    { status: 401 }
+                );
+            }
+
+            return NextResponse.json({ error: upstreamMessage }, { status: 500 });
         }
 
-        const choice = data.choices?.[0]?.message;
-        const content = choice?.content || "";
-        const reasoning = choice?.reasoning || ""; // OpenRouter standard field
+        const choice = data?.choices?.[0]?.message;
+        const content = typeof choice?.content === 'string' ? choice.content : '';
+        const reasoning = typeof choice?.reasoning === 'string' ? choice.reasoning : '';
+        const generated = content || 'Request processed successfully.';
 
-        return NextResponse.json({ content, reasoning });
-
-    } catch (error: any) {
-        console.error("[AI API] Internal Error:", error);
+        return NextResponse.json({
+            content: generated,
+            generated,
+            reasoning,
+            model: selectedModel,
+            keySource: source,
+        });
+    } catch (error) {
+        const err = error as Error;
+        console.error('[AI API] Internal Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }

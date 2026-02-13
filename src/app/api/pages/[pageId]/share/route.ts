@@ -1,14 +1,59 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc } from 'firebase/firestore';
-import { cookies } from 'next/headers';
+import { requireAuth } from '@/lib/server-auth';
+import { getAdminFirestore } from '@/lib/firebase-admin';
+
+interface PagePermissions {
+    owner: string;
+    shared: Record<string, string>;
+    generalAccess: 'private' | 'public';
+}
+
+type PageData = Record<string, unknown>;
+
+function getPermissions(page: PageData, fallbackUid: string): PagePermissions {
+    const raw = page.permissions;
+
+    if (!raw || typeof raw !== 'object') {
+        return {
+            owner: (page.ownerId as string) || (page.createdBy as string) || fallbackUid,
+            shared: {},
+            generalAccess: 'private',
+        };
+    }
+
+    const parsed = raw as Partial<PagePermissions>;
+    return {
+        owner: parsed.owner || (page.ownerId as string) || (page.createdBy as string) || fallbackUid,
+        shared: parsed.shared || {},
+        generalAccess: parsed.generalAccess || 'private',
+    };
+}
+
+function canSharePage(page: PageData, uid: string): boolean {
+    const permissions = getPermissions(page, uid);
+    const sharedRole = permissions.shared[uid];
+
+    return (
+        permissions.owner === uid
+        || page.ownerId === uid
+        || page.createdBy === uid
+        || sharedRole === 'editor'
+        || sharedRole === 'owner'
+        || sharedRole === 'admin'
+    );
+}
 
 export async function POST(
     req: Request,
     context: { params: Promise<{ pageId: string }> }
 ) {
     try {
-        const { email, role } = await req.json();
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
+
+        const { email, role } = await req.json() as { email?: string; role?: string };
         const { pageId } = await context.params;
 
         if (!email || !role) {
@@ -18,105 +63,73 @@ export async function POST(
             );
         }
 
-        const pageRef = doc(db, 'pages', pageId);
-        const pageSnap = await getDoc(pageRef);
+        const normalizedEmail = email.toLowerCase();
+        const db = getAdminFirestore();
+        const pageRef = db.collection('pages').doc(pageId);
+        const pageSnap = await pageRef.get();
 
-        if (!pageSnap.exists()) {
+        if (!pageSnap.exists) {
             return NextResponse.json(
                 { error: 'Page not found' },
                 { status: 404 }
             );
         }
 
-        const pageData = pageSnap.data();
-
-        // Check if user exists (optional - we can invite unregistered users)
-        const userQuery = query(
-            collection(db, 'users'),
-            where('email', '==', email.toLowerCase())
-        );
-        const userSnapshot = await getDocs(userQuery);
-
-        let invitedUserId = null;
-        // Check if user is already registered
-        if (!userSnapshot.empty) {
-            // User is already registered
-            invitedUserId = userSnapshot.docs[0].id;
+        const page = pageSnap.data() as PageData;
+        if (!canSharePage(page, auth.user.uid)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        // Get current user info for inviterName
-        const cookieStore = await cookies();
-        const sessionCookie = cookieStore.get('session');
-        let inviterName = 'Someone';
-        let inviterUserId = 'unknown';
+        const usersQuery = await db
+            .collection('users')
+            .where('email', '==', normalizedEmail)
+            .limit(1)
+            .get();
 
-        if (sessionCookie?.value) {
-            inviterUserId = sessionCookie.value;
-            try {
-                const inviterDoc = await getDoc(doc(db, 'users', inviterUserId));
-                if (inviterDoc.exists()) {
-                    const inviterData = inviterDoc.data();
-                    inviterName = inviterData.displayName || inviterData.email?.split('@')[0] || 'Someone';
-                }
-            } catch (error) {
-                console.error('Error fetching inviter:', error);
-            }
-        }
+        const invitedUserId = usersQuery.empty ? null : usersQuery.docs[0].id;
+        const invitationRef = db.collection('invitations').doc();
 
-        // Create invitation record with denormalized data for faster loading
         const invitation = {
+            id: invitationRef.id,
             pageId,
-            email: email.toLowerCase(),
+            email: normalizedEmail,
             role,
-            invitedBy: inviterUserId,
-            invitedAt: serverTimestamp(),
+            invitedBy: auth.user.uid,
+            invitedAt: new Date(),
             accepted: false,
-            workspaceId: pageData.workspaceId || 'default',
-            // Denormalized fields for performance
-            pageTitle: pageData.title || 'Untitled',
-            inviterName: inviterName,
+            workspaceId: (page.workspaceId as string) || 'default',
+            pageTitle: (page.title as string) || 'Untitled',
+            inviterName: auth.user.email || 'Someone',
+            type: 'page',
+            status: 'pending',
         };
 
-        const invitationRef = await addDoc(collection(db, 'invitations'), invitation);
+        await invitationRef.set(invitation);
 
-        // If user exists, also update page permissions
         if (invitedUserId) {
-            const permissions = pageData.permissions || {
-                owner: pageData.createdBy || pageData.ownerId,
-                shared: {},
-                generalAccess: 'private'
-            };
+            const permissions = getPermissions(page, auth.user.uid);
+            permissions.shared[invitedUserId] = role;
 
-            permissions.shared = {
-                ...permissions.shared,
-                [invitedUserId]: role
-            };
-
-            await updateDoc(pageRef, { permissions });
+            await pageRef.set(
+                {
+                    permissions,
+                    updatedAt: new Date(),
+                },
+                { merge: true }
+            );
         }
-
-        // TODO: Send email notification
-        // await sendInvitationEmail({
-        //     to: email,
-        //     inviterName: 'Current User',
-        //     pageTitle: pageData.title,
-        //     pageId,
-        //     role,
-        //     invitationId: invitationRef.id
-        // });
 
         return NextResponse.json({
             success: true,
-            message: invitedUserId
-                ? 'User added to page'
-                : 'Invitation sent via email',
+            message: invitedUserId ? 'User added to page' : 'Invitation sent via email',
             invitationId: invitationRef.id,
-            userId: invitedUserId
+            userId: invitedUserId,
         });
-    } catch (error: any) {
+    } catch (error) {
+        const err = error as Error;
         console.error('Share API Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }

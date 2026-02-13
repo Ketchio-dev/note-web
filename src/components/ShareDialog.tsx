@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { fetchWithAuth } from '@/lib/client-api';
 
 interface ShareDialogProps {
     pageId: string;
@@ -34,7 +35,7 @@ export function ShareDialog({ pageId, isOpen, onClose }: ShareDialogProps) {
 
     const loadPermissions = async () => {
         try {
-            const res = await fetch(`/api/pages/${pageId}/permissions`);
+            const res = await fetchWithAuth(`/api/pages/${pageId}/permissions`);
             const data = await res.json();
 
             if (res.ok) {
@@ -78,9 +79,8 @@ export function ShareDialog({ pageId, isOpen, onClose }: ShareDialogProps) {
 
         setLoading(true);
         try {
-            const res = await fetch(`/api/pages/${pageId}/share`, {
+            const res = await fetchWithAuth(`/api/pages/${pageId}/share`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, role })
             });
 
@@ -104,9 +104,8 @@ export function ShareDialog({ pageId, isOpen, onClose }: ShareDialogProps) {
 
     const handleRemoveUser = async (userId: string) => {
         try {
-            const res = await fetch(`/api/pages/${pageId}/permissions`, {
+            const res = await fetchWithAuth(`/api/pages/${pageId}/permissions`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, role: null }) // null = remove
             });
 

@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { X, Plus, Sparkles, FileUp, Link as LinkIcon, ArrowRight } from 'lucide-react';
 import { DATABASE_TEMPLATES, DatabaseTemplate } from '@/lib/database-templates';
 import TemplateCard from '@/components/database/TemplateCard';
+import { fetchWithAuth } from '@/lib/client-api';
 
 interface DatabaseCreationMenuProps {
     isOpen: boolean;
@@ -40,9 +41,8 @@ export default function DatabaseCreationMenu({
         setIsGenerating(true);
         try {
             // Call AI API to generate database structure
-            const response = await fetch('/api/ai', {
+            const response = await fetchWithAuth('/api/ai', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     prompt: `Create a database structure for: ${aiPrompt}. Return JSON with columns array, each having: name, type (text/number/select/date/checkbox), and optional default values.`,
                 }),
