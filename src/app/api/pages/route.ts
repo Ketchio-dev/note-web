@@ -1,29 +1,53 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { requireAuth } from '@/lib/server-auth';
+import { getAdminFirestore } from '@/lib/firebase-admin';
+import { toPlainJson } from '@/lib/server-json';
+
+interface PagePermissions {
+    owner?: string;
+    shared?: Record<string, string>;
+    generalAccess?: 'private' | 'public';
+}
+
+function canViewPage(page: Record<string, unknown>, uid: string): boolean {
+    const permissions = (page.permissions || {}) as PagePermissions;
+    const shared = permissions.shared || {};
+
+    return (
+        page.ownerId === uid
+        || page.createdBy === uid
+        || permissions.owner === uid
+        || Boolean(shared[uid])
+        || permissions.generalAccess === 'public'
+    );
+}
 
 export async function GET(req: Request) {
     try {
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
+
         const { searchParams } = new URL(req.url);
         const workspaceId = searchParams.get('workspaceId');
 
-        if (!workspaceId) {
-            return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
-        }
+        const db = getAdminFirestore();
+        const snapshot = workspaceId
+            ? await db.collection('pages').where('workspaceId', '==', workspaceId).get()
+            : await db.collection('pages').where('createdBy', '==', auth.user.uid).get();
 
-        const q = query(collection(db, 'pages'), where('workspaceId', '==', workspaceId));
-        const snapshot = await getDocs(q);
-
-        const pages = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        const pages = snapshot.docs
+            .map((pageDoc) => ({ id: pageDoc.id, ...pageDoc.data() }))
+            .filter((page) => canViewPage(page as Record<string, unknown>, auth.user.uid))
+            .map((page) => toPlainJson(page));
 
         return NextResponse.json({ pages });
-    } catch (error: any) {
+    } catch (error) {
+        const err = error as Error;
         console.error('List Pages Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }
@@ -31,48 +55,64 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const body = await req.json();
-        const { workspaceId, title, parentId, type, userId } = body;
-
-        if (!workspaceId) {
-            return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
         }
 
-        // Logic similar to workspace.ts createPage
-        const pageRef = doc(collection(db, "pages"));
-        const newPage = {
+        const body = await req.json() as {
+            workspaceId?: string;
+            title?: string;
+            parentId?: string | null;
+            type?: 'page' | 'database' | 'calendar';
+            userId?: string;
+            content?: string;
+        };
+
+        if (body.userId && body.userId !== auth.user.uid) {
+            return NextResponse.json({ error: 'Forbidden: userId mismatch' }, { status: 403 });
+        }
+
+        const now = new Date();
+        const db = getAdminFirestore();
+        const pageRef = db.collection('pages').doc();
+
+        const page = {
             id: pageRef.id,
-            workspaceId,
-            parentId: parentId || null,
-            title: title || "Untitled",
-            content: "",
-            type: type || 'page',
+            workspaceId: typeof body.workspaceId === 'string' && body.workspaceId.trim()
+                ? body.workspaceId
+                : 'default-workspace',
+            parentId: body.parentId || null,
+            title: body.title || 'Untitled',
+            content: typeof body.content === 'string' ? body.content : '',
+            type: body.type || 'page',
             section: 'workspace',
-            createdBy: userId || 'api',
+            createdBy: auth.user.uid,
+            ownerId: auth.user.uid,
             properties: [],
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            createdAt: now,
+            updatedAt: now,
             font: 'default',
             fullWidth: false,
             smallText: false,
             locked: false,
             inTrash: false,
-            order: new Date().getTime()
+            order: Date.now(),
+            permissions: {
+                owner: auth.user.uid,
+                shared: {},
+                generalAccess: 'private',
+            },
         };
 
-        // Use setDoc to match client-side logic if possible, or addDoc if ID auto-gen desired but we generated it.
-        // workspace.ts uses setDoc with custom ID? No, it uses doc(collection(...)) then setDoc.
-        // Wait, workspace.ts: `const pageRef = doc(collection(db, "pages"));` -> generates ID.
-        // Then `await setDoc(pageRef, newPage);`.
+        await pageRef.set(page);
 
-        // We will do the same:
-        await setDoc(pageRef, newPage);
-
-        return NextResponse.json(newPage);
-    } catch (error: any) {
+        return NextResponse.json(toPlainJson(page), { status: 201 });
+    } catch (error) {
+        const err = error as Error;
         console.error('Create Page Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }

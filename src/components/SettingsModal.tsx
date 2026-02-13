@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { useTheme, BUILTIN_THEMES } from "@/lib/themes";
+import { fetchWithAuth } from "@/lib/client-api";
 
 export default function SettingsModal({ isOpen, onClose, initialTab = 'general' }: { isOpen: boolean; onClose: () => void; initialTab?: 'general' | 'members' }) {
     const params = useParams();
@@ -44,7 +45,7 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
     const checkApiKeyExists = async () => {
         if (!user) return;
         try {
-            const res = await fetch(`/api/user/api-key?userId=${user.uid}`);
+            const res = await fetchWithAuth(`/api/user/api-key?userId=${user.uid}`);
             const data = await res.json();
             setHasApiKey(data.hasApiKey || false);
         } catch (e) {
@@ -76,9 +77,8 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
         }
 
         try {
-            const res = await fetch('/api/user/api-key', {
+            const res = await fetchWithAuth('/api/user/api-key', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     apiKey: apiKey.trim(),
                     userId: user.uid

@@ -1,37 +1,85 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { requireAuth } from '@/lib/server-auth';
+import { getAdminFirestore } from '@/lib/firebase-admin';
+import { toPlainJson } from '@/lib/server-json';
+
+interface PagePermissions {
+    owner: string;
+    shared: Record<string, string>;
+    generalAccess: 'private' | 'public';
+}
+
+type PageDocData = Record<string, unknown>;
+
+function getNormalizedPermissions(page: PageDocData, uidFallback: string): PagePermissions {
+    const raw = page.permissions;
+
+    if (!raw || typeof raw !== 'object') {
+        return {
+            owner: (page.ownerId as string) || (page.createdBy as string) || uidFallback,
+            shared: {},
+            generalAccess: 'private',
+        };
+    }
+
+    const parsed = raw as Partial<PagePermissions>;
+
+    return {
+        owner: parsed.owner || (page.ownerId as string) || (page.createdBy as string) || uidFallback,
+        shared: parsed.shared || {},
+        generalAccess: parsed.generalAccess || 'private',
+    };
+}
+
+function canEditPermissions(page: PageDocData, uid: string): boolean {
+    const permissions = getNormalizedPermissions(page, uid);
+    const sharedRole = permissions.shared[uid];
+
+    return (
+        permissions.owner === uid
+        || page.ownerId === uid
+        || page.createdBy === uid
+        || sharedRole === 'owner'
+        || sharedRole === 'admin'
+    );
+}
 
 export async function GET(
     req: Request,
     context: { params: Promise<{ pageId: string }> }
 ) {
     try {
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
+
         const { pageId } = await context.params;
+        const db = getAdminFirestore();
+        const pageRef = db.collection('pages').doc(pageId);
+        const pageSnap = await pageRef.get();
 
-        const pageRef = doc(db, 'pages', pageId);
-        const pageSnap = await getDoc(pageRef);
-
-        if (!pageSnap.exists()) {
+        if (!pageSnap.exists) {
             return NextResponse.json(
                 { error: 'Page not found' },
                 { status: 404 }
             );
         }
 
-        const pageData = pageSnap.data();
-        const permissions = pageData.permissions || {
-            owner: pageData.ownerId || 'unknown',
-            shared: {},
-            generalAccess: 'private'
-        };
+        const page = pageSnap.data() as PageDocData;
+        const permissions = getNormalizedPermissions(page, auth.user.uid);
+        const canRead = canEditPermissions(page, auth.user.uid) || permissions.shared[auth.user.uid] || permissions.generalAccess === 'public';
 
-        return NextResponse.json({ permissions });
+        if (!canRead) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
 
-    } catch (error: any) {
+        return NextResponse.json({ permissions: toPlainJson(permissions) });
+    } catch (error) {
+        const err = error as Error;
         console.error('Get Permissions Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }
@@ -42,46 +90,56 @@ export async function PUT(
     context: { params: Promise<{ pageId: string }> }
 ) {
     try {
-        const { userId, role } = await req.json();
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
+
+        const { userId, role } = await req.json() as { userId?: string; role?: string | null };
         const { pageId } = await context.params;
 
-        const pageRef = doc(db, 'pages', pageId);
-        const pageSnap = await getDoc(pageRef);
+        if (!userId) {
+            return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+        }
 
-        if (!pageSnap.exists()) {
+        const db = getAdminFirestore();
+        const pageRef = db.collection('pages').doc(pageId);
+        const pageSnap = await pageRef.get();
+
+        if (!pageSnap.exists) {
             return NextResponse.json(
                 { error: 'Page not found' },
                 { status: 404 }
             );
         }
 
-        const pageData = pageSnap.data();
-        const permissions = pageData.permissions || {
-            owner: pageData.ownerId,
-            shared: {},
-            generalAccess: 'private'
-        };
-
-        // Update permissions
-        if (role === null) {
-            // Remove user
-            delete permissions.shared[userId];
-        } else {
-            // Add or update user role
-            permissions.shared[userId] = role;
+        const page = pageSnap.data() as PageDocData;
+        if (!canEditPermissions(page, auth.user.uid)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        await updateDoc(pageRef, { permissions });
+        const permissions = getNormalizedPermissions(page, auth.user.uid);
 
-        return NextResponse.json({
-            success: true,
-            permissions
-        });
+        if (role === null) {
+            delete permissions.shared[userId];
+        } else {
+            permissions.shared[userId] = role || 'viewer';
+        }
 
-    } catch (error: any) {
+        await pageRef.set(
+            {
+                permissions,
+                updatedAt: new Date(),
+            },
+            { merge: true }
+        );
+
+        return NextResponse.json({ success: true, permissions: toPlainJson(permissions) });
+    } catch (error) {
+        const err = error as Error;
         console.error('Update Permissions Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }

@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { Search, FileText, Download, Copy, Sparkles, ExternalLink, Loader2 } from 'lucide-react';
+import { fetchWithAuth } from '@/lib/client-api';
 
 interface SearchResult {
     title: string;
@@ -100,9 +101,8 @@ export function AIResearchAssistant({ onReportGenerated }: AIResearchProps) {
         results: SearchResult[]
     ): Promise<GeneratedReport> => {
         // Call AI API to generate structured report
-        const response = await fetch('/api/ai', {
+        const response = await fetchWithAuth('/api/ai', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 prompt: `You are a professional research analyst. Based on the following search results about "${searchQuery}", create a comprehensive, well-structured report.
 

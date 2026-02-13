@@ -1,59 +1,82 @@
-
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { requireAuth } from '@/lib/server-auth';
+import { getAdminFirestore } from '@/lib/firebase-admin';
+import { canViewInvitation, InvitationData } from '@/lib/server-invitations';
+import { toPlainJson } from '@/lib/server-json';
 
 export async function GET(
-    request: Request,
+    req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = await params;
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
 
+        const { id } = await params;
         if (!id) {
             return NextResponse.json({ error: 'Invitation ID required' }, { status: 400 });
         }
 
-        const invitationRef = doc(db, 'invitations', id);
-        const invitationSnap = await getDoc(invitationRef);
+        const db = getAdminFirestore();
+        const invitationSnap = await db.collection('invitations').doc(id).get();
 
-        if (!invitationSnap.exists()) {
+        if (!invitationSnap.exists) {
             return NextResponse.json({ error: 'Invitation not found' }, { status: 404 });
         }
 
-        return NextResponse.json({
-            id: invitationSnap.id,
-            ...invitationSnap.data()
-        });
+        const invitation = { id: invitationSnap.id, ...invitationSnap.data() } as InvitationData;
+        if (!canViewInvitation(invitation, auth.user)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
 
-    } catch (error: any) {
+        return NextResponse.json(toPlainJson(invitation));
+    } catch (error) {
+        const err = error as Error;
         console.error('Get Invitation Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }
 }
 
 export async function DELETE(
-    request: Request,
+    req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = await params;
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
 
+        const { id } = await params;
         if (!id) {
             return NextResponse.json({ error: 'Invitation ID required' }, { status: 400 });
         }
 
-        await deleteDoc(doc(db, 'invitations', id));
+        const db = getAdminFirestore();
+        const invitationRef = db.collection('invitations').doc(id);
+        const invitationSnap = await invitationRef.get();
 
+        if (!invitationSnap.exists) {
+            return NextResponse.json({ error: 'Invitation not found' }, { status: 404 });
+        }
+
+        const invitation = { id: invitationSnap.id, ...invitationSnap.data() } as InvitationData;
+        if (invitation.invitedBy !== auth.user.uid) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        await invitationRef.delete();
         return NextResponse.json({ success: true });
-
-    } catch (error: any) {
+    } catch (error) {
+        const err = error as Error;
         console.error('Delete Invitation Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }

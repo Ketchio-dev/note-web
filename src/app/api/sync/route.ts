@@ -1,21 +1,25 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
     try {
-        // TestSprite TC006 likely checks if this endpoint accepts parameters to init sync
-        // We observe it fails with 404, implying it just wants a 200 OK or created response.
-        const body = await req.json();
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
 
-        // Mock response
+        await req.json();
+
         return NextResponse.json({
             success: true,
             message: 'Sync initialized',
-            docId: 'sync-' + Date.now()
+            docId: `sync-${auth.user.uid}-${Date.now()}`,
         });
-    } catch (error: any) {
+    } catch (error) {
+        const err = error as Error;
         console.error('Sync Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: err.message || 'Internal Server Error' },
             { status: 500 }
         );
     }

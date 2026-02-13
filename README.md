@@ -1,5 +1,21 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Required Server Environment (Vercel)
+
+For server-side Firestore access in API routes, Firebase Admin SDK must be configured:
+
+```bash
+FIREBASE_ADMIN_PROJECT_ID=your-project-id
+FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-xxx@your-project.iam.gserviceaccount.com
+FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+ENCRYPTION_KEY=64_hex_characters_for_aes_256_gcm
+OPENROUTER_API_KEY=optional_fallback_key
+```
+
+- `FIREBASE_ADMIN_PRIVATE_KEY` must keep `\\n` escaped in environment values (Vercel style).
+- `ENCRYPTION_KEY` must be exactly 64 hex chars.
+- API routes now require `Authorization: Bearer <Firebase ID Token>`.
+
 ## Getting Started
 
 First, run the development server:

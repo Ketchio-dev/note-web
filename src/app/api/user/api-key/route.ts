@@ -1,20 +1,32 @@
 import { NextResponse } from 'next/server';
+import { FieldValue } from 'firebase-admin/firestore';
 import { encrypt } from '@/lib/crypto';
-import { db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { getAdminFirestore } from '@/lib/firebase-admin';
+import { requireAuth } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
     try {
-        const { apiKey, userId } = await req.json();
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
 
-        if (!apiKey || !userId) {
+        const { apiKey, userId } = await req.json() as {
+            apiKey?: string;
+            userId?: string;
+        };
+
+        if (userId && userId !== auth.user.uid) {
+            return NextResponse.json({ error: 'Forbidden: userId mismatch' }, { status: 403 });
+        }
+
+        if (!apiKey) {
             return NextResponse.json(
-                { error: 'API key and user ID are required' },
+                { error: 'API key is required' },
                 { status: 400 }
             );
         }
 
-        // Validate API key format (basic check)
         if (typeof apiKey !== 'string' || apiKey.length < 10) {
             return NextResponse.json(
                 { error: 'Invalid API key format' },
@@ -22,57 +34,66 @@ export async function POST(req: Request) {
             );
         }
 
-        // Encrypt the API key
         const encryptedKey = encrypt(apiKey);
+        const db = getAdminFirestore();
 
-        // Store in Firestore under user's private settings
-        const settingsRef = doc(db, 'users', userId, 'private', 'settings');
-        await setDoc(settingsRef, {
-            openrouterKey: encryptedKey,
-            updatedAt: new Date().toISOString()
-        }, { merge: true });
+        await db
+            .collection('users')
+            .doc(auth.user.uid)
+            .collection('private')
+            .doc('settings')
+            .set(
+                {
+                    openrouterKey: encryptedKey,
+                    updatedAt: FieldValue.serverTimestamp(),
+                },
+                { merge: true }
+            );
 
         return NextResponse.json({
             success: true,
-            message: 'API key saved securely'
+            message: 'API key saved securely',
         });
-
-    } catch (error: any) {
-        console.error('Error saving API key:', error);
+    } catch (error) {
+        const err = error as Error;
+        console.error('[API Key] Save failed:', error);
         return NextResponse.json(
-            { error: 'Failed to save API key' },
+            { error: err.message || 'Failed to save API key' },
             { status: 500 }
         );
     }
 }
 
-// GET endpoint to check if user has API key configured
 export async function GET(req: Request) {
     try {
+        const auth = await requireAuth(req);
+        if (!auth.ok) {
+            return auth.response;
+        }
+
         const { searchParams } = new URL(req.url);
         const userId = searchParams.get('userId');
 
-        if (!userId) {
-            return NextResponse.json(
-                { error: 'User ID is required' },
-                { status: 400 }
-            );
+        if (userId && userId !== auth.user.uid) {
+            return NextResponse.json({ error: 'Forbidden: userId mismatch' }, { status: 403 });
         }
 
-        const settingsRef = doc(db, 'users', userId, 'private', 'settings');
-        const { getDoc } = await import('firebase/firestore');
-        const settingsDoc = await getDoc(settingsRef);
+        const db = getAdminFirestore();
+        const settingsDoc = await db
+            .collection('users')
+            .doc(auth.user.uid)
+            .collection('private')
+            .doc('settings')
+            .get();
 
-        const hasKey = settingsDoc.exists() && !!settingsDoc.data()?.openrouterKey;
+        const hasKey = settingsDoc.exists && Boolean(settingsDoc.data()?.openrouterKey);
 
-        return NextResponse.json({
-            hasApiKey: hasKey
-        });
-
-    } catch (error: any) {
-        console.error('Error checking API key:', error);
+        return NextResponse.json({ hasApiKey: hasKey });
+    } catch (error) {
+        const err = error as Error;
+        console.error('[API Key] Check failed:', error);
         return NextResponse.json(
-            { error: 'Failed to check API key status' },
+            { error: err.message || 'Failed to check API key status' },
             { status: 500 }
         );
     }
