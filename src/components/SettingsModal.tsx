@@ -46,6 +46,10 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
         if (!user) return;
         try {
             const res = await fetchWithAuth(`/api/user/api-key?userId=${user.uid}`);
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => null) as { error?: string } | null;
+                throw new Error(errorData?.error || `Failed to check API key (${res.status})`);
+            }
             const data = await res.json();
             setHasApiKey(data.hasApiKey || false);
         } catch (e) {
@@ -86,7 +90,8 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
             });
 
             if (!res.ok) {
-                throw new Error('Failed to save API key');
+                const errorData = await res.json().catch(() => null) as { error?: string } | null;
+                throw new Error(errorData?.error || `Failed to save API key (${res.status})`);
             }
 
             // Save model preference to localStorage (not sensitive)
@@ -94,7 +99,7 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'general' 
 
             // Clear API key input for security
             setApiKey("");
-            setHasApiKey(true);
+            await checkApiKeyExists();
 
             toast.success("API key saved securely!");
             onClose();
